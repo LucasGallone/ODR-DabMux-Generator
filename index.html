@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>ODR-DabMux.info Generator</title>
+<style>
+  table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+  th, td { border: 1px solid #aaa; padding: 5px; text-align: center; }
+  th { background-color: #ddd; }
+  .error { color: red; font-weight: bold; margin-top: 10px; }
+  #cuIndicator { float: right; font-weight: bold; padding: 5px; }
+</style>
+</head>
+<body>
+
+<h2><a href="https://github.com/Opendigitalradio" target="_blank">ODR</a>-DabMux.info Generator with real-time CU Calculator</h2>
+
+<!-- Ensemble Section -->
+<h3>Ensemble Configuration</h3>
+<table id="ensembleTable">
+<thead>
+<tr>
+  <th>EID (Ensemble ID)</th>
+  <th>Country (for ECC)</th>
+  <th>Long Ensemble Label</th>
+  <th>Short Ensemble Label</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><input type="text" id="eid" maxlength="4"></td>
+  <td>
+    <select id="ensembleEcc">
+    </select>
+  </td>
+  <td><input type="text" id="ensembleLabel" value="" maxlength="16"></td>
+  <td><input type="text" id="ensembleShortLabel" value="" maxlength="8"></td>
+</tr>
+</tbody>
+</table>
+
+<h3>Services List Configuration</h3>
+
+<div id="cuIndicator">CU: 0/864</div>
+
+<button onclick="addService()">Add a new service</button>
+<button onclick="generateConfig()">Generate and download the odr-dabmux.info file</button>
+
+<div id="error" class="error"></div>
+
+<!-- Services List Section -->
+<table id="servicesTable">
+<thead>
+  <tr>
+    <th>#</th>
+    <th>SID (Service ID)</th>
+	<th>Long Label</th>
+    <th>Short Label</th>
+    <th>PTY (Program Type)</th>
+	<th>DAB Type</th>
+    <th>Bitrate</th>
+    <th>EEP</th>
+    <th>Country (for ECC)</th>
+    <th>Language (for LIC)</th>
+    <th>Port</th>
+    <th>Remove</th>
+  </tr>
+</thead>
+<tbody></tbody>
+</table>
+
+<script>
+let serviceCount = 0;
+
+// --- PTYs list ---
+const ptyList = [
+  { label: "None / Undefined", value: "00" },
+  { label: "Children's programmes", value: "18" },
+  { label: "Country Music", value: "25" },
+  { label: "Culture", value: "07" },
+  { label: "Current Affairs", value: "02" },
+  { label: "Documentary", value: "29" },
+  { label: "Drama", value: "06" },
+  { label: "Easy Listening Music", value: "12" },
+  { label: "Education", value: "05" },
+  { label: "Finance", value: "17" },
+  { label: "Folk Music", value: "28" },
+  { label: "Information", value: "03" },
+  { label: "Jazz Music", value: "24" },
+  { label: "Leisure", value: "23" },
+  { label: "Light Classical", value: "13" },
+  { label: "National Music", value: "26" },
+  { label: "News", value: "01" },
+  { label: "Oldies Music", value: "27" },
+  { label: "Other Music", value: "15" },
+  { label: "Phone-in", value: "21" },
+  { label: "Pop Music", value: "10" },
+  { label: "Religion", value: "20" },
+  { label: "Rock Music", value: "11" },
+  { label: "Science", value: "08" },
+  { label: "Serious Classical", value: "14" },
+  { label: "Social Affairs", value: "19" },
+  { label: "Sport", value: "04" },
+  { label: "Travel", value: "22" },
+  { label: "Varied / Talk", value: "09" },
+  { label: "Weather", value: "16" }
+];
+
+
+// --- Countries list for ECC ---
+const eccList = [
+{country:"None / Undefined", value:"0x00"}, {country:"Afghanistan", value:"0xf0"}, {country:"Albania", value:"0xe0"}, {country:"Algeria", value:"0xe0"}, 
+{country:"Andorra", value:"0xe0"}, {country:"Angola", value:"0xd0"}, {country:"Armenia", value:"0xe4"}, 
+{country:"Argentina", value:"0xa2"}, {country:"Australia", value:"0xe0"}, {country:"Austria", value:"0xe0"},
+{country:"Azerbaijan", value:"0xe3"}, {country:"Azores", value:"0xe0"}, {country:"Bahamas", value:"0xa2"},
+{country:"Bahrain", value:"0xf0"}, {country:"Bangladesh", value:"0xf1"}, {country:"Barbados", value:"0xa2"},
+{country:"Belarus", value:"0xe3"}, {country:"Belgium", value:"0xe0"}, {country:"Belize", value:"0xa2"},
+{country:"Benin", value:"0xd0"}, {country:"Bermuda", value:"0xa2"}, {country:"Bhutan", value:"0xf1"},
+{country:"Bolivia", value:"0xa3"}, {country:"Bosnia and Herzegovina", value:"0xe4"}, {country:"Botswana", value:"0xd1"},
+{country:"Brazil", value:"0xa2"}, {country:"Bulgaria", value:"0xe1"}, {country:"Burundi", value:"0xd1"},
+{country:"Cambodia", value:"0xf2"}, {country:"Cameroon", value:"0xd0"}, {country:"Canada", value:"0xa1"},
+{country:"Cape Verde", value:"0xd1"}, {country:"Canary Islands", value:"0xe0"}, {country:"Chad", value:"0xd2"},
+{country:"Chile", value:"0xa3"}, {country:"China", value:"0xf0"}, {country:"Colombia", value:"0xa3"},
+{country:"Costa Rica", value:"0xa2"}, {country:"Croatia", value:"0xe3"}, {country:"Cuba", value:"0xa2"},
+{country:"Cyprus", value:"0xe1"}, {country:"Czech Republic", value:"0xe2"}, {country:"Denmark", value:"0xe1"},
+{country:"Djibouti", value:"0xd0"}, {country:"Dominican Republic", value:"0xa3"}, {country:"Ecuador", value:"0xa2"},
+{country:"Egypt", value:"0xe0"}, {country:"El Salvador", value:"0xa4"},
+{country:"Estonia", value:"0xd0"}, {country:"Eswatini", value:"0xd2"}, {country:"Ethiopia", value:"0xd1"}, {country:"Faroe Islands", value:"0xe1"},
+{country:"Fiji", value:"0xf1"}, {country:"Finland", value:"0xe1"}, {country:"France", value:"0xe1"},
+{country:"Georgia", value:"0xe4"}, {country:"Germany", value:"0xe0"}, {country:"Gibraltar", value:"0xe1"},
+{country:"Greece", value:"0xe1"}, {country:"Greenland", value:"0xa1"}, {country:"Grenada", value:"0xa3"},
+{country:"Guadeloupe", value:"0xa2"}, {country:"Guatemala", value:"0xa4"}, {country:"Guinea", value:"0xd0"},
+{country:"Guyana", value:"0xa3"}, {country:"Haiti", value:"0xa4"},
+{country:"Hong Kong", value:"0xf1"}, {country:"Hungary", value:"0xe0"}, {country:"Iceland", value:"0xe2"},
+{country:"India", value:"0xf2"}, {country:"Indonesia", value:"0xf2"}, {country:"Iran", value:"0xf1"},
+{country:"Iraq", value:"0xe1"}, {country:"Ireland", value:"0xe3"}, {country:"Israel", value:"0xe0"},
+{country:"Italy", value:"0xe0"}, {country:"Jamaica", value:"0xa3"}, {country:"Japan", value:"0xf2"},
+{country:"Jordan", value:"0xe1"}, {country:"Kazakhstan", value:"0xe3"}, {country:"Kenya", value:"0xd2"},
+{country:"Kiribati", value:"0xf1"}, {country:"Kosovo", value:"0xe4"}, {country:"Kuwait", value:"0xf2"},
+{country:"Kyrgyzstan", value:"0xe4"}, {country:"Laos", value:"0xf3"}, {country:"Latvia", value:"0xe3"},
+{country:"Lebanon", value:"0xe3"}, {country:"Libya", value:"0xe1"}, {country:"Liechtenstein", value:"0xe2"},
+{country:"Lithuania", value:"0xe2"}, {country:"Luxembourg", value:"0xe1"}, {country:"Macau", value:"0xf2"},
+{country:"Madagascar", value:"0xd0"}, {country:"Malawi", value:"0xd0"}, {country:"Malaysia", value:"0xf0"},
+{country:"Maldives", value:"0xf2"}, {country:"Malta", value:"0xe0"}, {country:"Mauritius", value:"0xd3"},
+{country:"Mexico", value:"0xa4"}, {country:"Moldova", value:"0xe4"}, {country:"Monaco", value:"0xe2"},
+{country:"Mongolia", value:"0xf3"}, {country:"Montenegro", value:"0xe3"}, {country:"Morocco", value:"0xe2"},
+{country:"Mozambique", value:"0xd2"}, {country:"Myanmar", value:"0xf0"}, {country:"Namibia", value:"0xd1"},
+{country:"Nauru", value:"0xf1"}, {country:"Nepal", value:"0xf2"}, {country:"Netherlands", value:"0xe3"},
+{country:"Netherlands Antilles", value:"0xa2"}, {country:"New Zealand", value:"0xf1"}, {country:"North Korea", value:"0xf0"},
+{country:"North Macedonia", value:"0xe3"}, {country:"Norway", value:"0xe2"}, {country:"Oman", value:"0xf1"},
+{country:"Pakistan", value:"0xf1"}, {country:"Palestine", value:"0xe0"}, {country:"Panama", value:"0xa3"},
+{country:"Papua New Guinea", value:"0xf3"}, {country:"Paraguay", value:"0xa3"}, {country:"Peru", value:"0xa4"},
+{country:"Philippines", value:"0xf2"}, {country:"Poland", value:"0xe2"}, {country:"Portugal", value:"0xe4"},
+{country:"Puerto Rico", value:"0xa3"}, {country:"Qatar", value:"0xf2"}, {country:"Romania", value:"0xe1"},
+{country:"Russia", value:"0xe0"}, {country:"Saint Kitts and Nevis", value:"0xa4"}, {country:"Saint Lucia", value:"0xa4"},
+{country:"Saint-Pierre-et-Miquelon", value:"0xa6"}, {country:"Saint-Vincent", value:"0xa5"}, {country:"San Marino", value:"0xe1"},
+{country:"Saudi Arabia", value:"0xf0"}, {country:"Senegal", value:"0xd1"}, {country:"Serbia", value:"0xe2"},
+{country:"Seychelles", value:"0xd3"}, {country:"Sierra Leone", value:"0xd2"}, {country:"Singapore", value:"0xf2"},
+{country:"Slovakia", value:"0xe2"}, {country:"Slovenia", value:"0xe4"}, {country:"Solomon Islands", value:"0xf1"},
+{country:"Somalia", value:"0xd2"}, {country:"South Africa", value:"0xd0"}, {country:"South Korea", value:"0xf1"},
+{country:"Spain", value:"0xe2"}, {country:"Sri Lanka", value:"0xf1"}, {country:"Sudan", value:"0xd3"},
+{country:"Sweden", value:"0xe3"}, {country:"Switzerland", value:"0xe1"},
+{country:"Syria", value:"0xe2"}, {country:"Taiwan", value:"0xf1"}, {country:"Tajikistan", value:"0xe3"},
+{country:"Thailand", value:"0xf3"}, {country:"Togo", value:"0xd0"}, {country:"Tonga", value:"0xf3"},
+{country:"Tunisia", value:"0xe2"}, {country:"Turkey", value:"0xe3"}, {country:"Turkmenistan", value:"0xe4"},
+{country:"Uganda", value:"0xd2"}, {country:"Ukraine", value:"0xe4"}, {country:"United Arab Emirates", value:"0xf2"},
+{country:"United Kingdom", value:"0xe1"}, {country:"United States of America (USA)", value:"0xa0"},
+{country:"Uruguay", value:"0xa4"}, {country:"Uzbekistan", value:"0xe4"}, {country:"Vanuatu", value:"0xf2"},
+{country:"Vatican", value:"0xe2"}, {country:"Venezuela", value:"0xa4"}, {country:"Virgin Islands", value:"0xa5"},
+{country:"Western Sahara", value:"0xd3"}, {country:"Zambia", value:"0xd2"}, {country:"Zanzibar", value:"0xd2"},
+{country:"Zimbabwe", value:"0xd2"}
+];
+
+// --- Languages list for LIC ---
+const licList = [
+  {language:"None / Undefined", value:"0x00"},
+  {language:"Albanian", value:"0x01"},
+  {language:"Basque", value:"0x0d"},
+  {language:"Breton", value:"0x02"},
+  {language:"Catalan", value:"0x03"},
+  {language:"Croatian", value:"0x04"},
+  {language:"Czech", value:"0x06"},
+  {language:"Danish", value:"0x07"},
+  {language:"Dutch", value:"0x1d"},
+  {language:"English", value:"0x09"},
+  {language:"Esperanto", value:"0x0b"},
+  {language:"Estonian", value:"0x0c"},
+  {language:"Faroese", value:"0x0e"},
+  {language:"Finnish", value:"0x27"},
+  {language:"Flemish", value:"0x2a"},
+  {language:"French", value:"0x0f"},
+  {language:"Frisian", value:"0x10"},
+  {language:"Galician", value:"0x13"},
+  {language:"Gaelic", value:"0x12"},
+  {language:"German", value:"0x08"},
+  {language:"Hungarian", value:"0x1b"},
+  {language:"Icelandic", value:"0x14"},
+  {language:"Irish", value:"0x11"},
+  {language:"Italian", value:"0x15"},
+  {language:"Latin", value:"0x17"},
+  {language:"Latvian", value:"0x18"},
+  {language:"Lithuanian", value:"0x1a"},
+  {language:"Luxembourgish", value:"0x19"},
+  {language:"Maltese", value:"0x1c"},
+  {language:"Norwegian", value:"0x1e"},
+  {language:"Occitan", value:"0x1f"},
+  {language:"Polish", value:"0x20"},
+  {language:"Portuguese", value:"0x21"},
+  {language:"Romanian", value:"0x22"},
+  {language:"Romansh", value:"0x23"},
+  {language:"Sami", value:"0x16"},
+  {language:"Serbian", value:"0x24"},
+  {language:"Slovak", value:"0x25"},
+  {language:"Slovenian", value:"0x26"},
+  {language:"Spanish", value:"0x0a"},
+  {language:"Swedish", value:"0x28"},
+  {language:"Turkish", value:"0x29"},
+  {language:"Walloon", value:"0x2b"}
+];
+
+// --- Bitrate & EEP ---
+const bitrateList = [];
+for(let b=8; b<=384; b+=8){ bitrateList.push(b + " Kbps"); }
+const eepList = ["1A","2A","3A","4A"];
+
+// --- CU tables ---
+const cuTable = {
+  "1A": Array.from({length:48}, (_,i)=>12*(i+1)),
+  "2A": Array.from({length:48}, (_,i)=>8*(i+1)),
+  "3A": Array.from({length:48}, (_,i)=>6*(i+1)),
+  "4A": Array.from({length:48}, (_,i)=>4*(i+1))
+};
+
+// --- Fill ensemble ECC ---
+const ensembleEccSelect = document.getElementById("ensembleEcc");
+eccList.forEach(e=>{
+  const opt = document.createElement("option");
+  opt.value = e.value;
+  opt.textContent = e.country;
+  ensembleEccSelect.appendChild(opt);
+});
+ensembleEccSelect.value = "0x00"; // default
+
+// --- Add a service ---
+function addService(){
+  if(serviceCount >= 50) return alert("You have reached the maximum amount of services.");
+  serviceCount++;
+
+  const tbody = document.querySelector("#servicesTable tbody");
+  const tr = document.createElement("tr");
+
+  tr.innerHTML = `
+    <td>${serviceCount}</td>
+    <td><input type="text" class="sid" value="" maxlength="4"></td>
+	<td><input type="text" class="labelLong" maxlength="16" value=""></td>
+    <td><input type="text" class="labelShort" maxlength="8" value=""></td>
+    <td><select class="pty">${ptyList.map(p => `<option value="${p.value}">${p.label}</option>`).join('')}</select></td>
+	<td><select class="dabType"><option value="dabplus" selected>DAB+</option><option value="audio">DAB</option></select></td>
+    <td><select class="bitrate">${bitrateList.map(b=>`<option>${b}</option>`).join('')}</select></td>
+    <td><select class="eep">${eepList.map(e=>`<option>${e}</option>`).join('')}</select></td>
+    <td><select class="ecc">${eccList.map(e=>`<option value="${e.value}">${e.country}</option>`).join('')}</select></td>
+    <td><select class="lic">${licList.map(l=>`<option value="${l.value}">${l.language}</option>`).join('')}</select></td>
+    <td><input type="number" class="port" min="1000" max="60000" value="${9000 + serviceCount}"></td>
+    <td><button class="deleteBtn">X</button></td>
+  `;
+
+  tbody.appendChild(tr);
+
+  // événements pour CU
+  tr.querySelector(".bitrate").addEventListener("change", updateCU);
+  tr.querySelector(".eep").addEventListener("change", updateCU);
+
+  // bouton delete
+  tr.querySelector(".deleteBtn").addEventListener("click", function() {
+    tr.remove();
+    serviceCount--;
+    updateServiceIndices();
+    updateCU();
+  });
+
+  updateCU();
+}
+
+// --- Renumbering ---
+function updateServiceIndices() {
+  const rows = document.querySelectorAll("#servicesTable tbody tr");
+  rows.forEach((row, idx) => {
+    row.cells[0].textContent = idx + 1;
+    row.querySelector(".port").value = 9001 + idx;
+  });
+}
+
+// --- CU Calculation ---
+function updateCU(){
+  const rows = document.querySelectorAll("#servicesTable tbody tr");
+  let totalCU = 0;
+  rows.forEach((row) => {
+    const brText = row.querySelector(".bitrate").value;
+    const br = parseInt(brText);
+    const eep = row.querySelector(".eep").value;
+    const index = br/8 - 1;
+    totalCU += cuTable[eep][index] || 0;
+  });
+  const cuIndicator = document.getElementById("cuIndicator");
+  cuIndicator.textContent = `CU: ${totalCU}/864`;
+  cuIndicator.style.color = totalCU <= 864 ? "green" : "red";
+}
+
+// --- Generating the configuration ---
+function generateConfig(){
+  const errorDiv = document.getElementById("error");
+  errorDiv.textContent = "";
+
+  // --- Ensemble validation ---
+  const eid = document.getElementById("eid").value.trim();
+  if(!/^[0-9a-fA-F]{1,4}$/.test(eid)){
+    errorDiv.textContent = "ERROR: The EID field is empty or contains 1 or multiple invalid character(s). Please correct the value and try again.";
+    return;
+  }
+  const ensembleLabel = document.getElementById("ensembleLabel").value.trim();
+  const ensembleShortLabel = document.getElementById("ensembleShortLabel").value.trim();
+  if(ensembleLabel.length>16){
+    errorDiv.textContent = "ERROR: The ensemble Label exceeds 16 characters. Please correct the value and try again.";
+    return;
+  }
+  if(ensembleShortLabel.length>8){
+    errorDiv.textContent = "ERROR: The ensemble Short Label exceeds 8 characters. Please correct the value and try again.";
+    return;
+  }
+  const ensembleEcc = document.getElementById("ensembleEcc").value;
+
+  const rows = Array.from(document.querySelectorAll("#servicesTable tbody tr"));
+  // Filter out empty services
+  const validRows = rows.filter(row=>{
+    const sid = row.querySelector(".sid").value.trim();
+    const shortlabel = row.querySelector(".labelShort").value.trim();
+    const longlabel = row.querySelector(".labelLong").value.trim();
+    return sid!=="" || shortlabel!=="" || longlabel!=="";
+  });
+  
+  // --- Checking that at least one service was created ---
+  if(validRows.length === 0){
+  errorDiv.textContent = 'ERROR: You cannot create an empty multiplex. Make your first service by clicking on the "Add a new service" button.';
+  return;
+  }
+
+  let content = "";
+  let totalCU = 0;
+  let protectionMap = {"1A":1,"2A":2,"3A":3,"4A":4};
+
+  // --- General + Remotecontrol ---
+  content += `general {
+    dabmode 1
+    nbframes 0
+    syslog false
+    tist false
+    managementport 12720
+}
+
+remotecontrol {
+    telnetport 12721
+    zmqendpoint tcp://lo:12722
+}
+
+ensemble {
+    id 0x${eid}
+    ecc ${ensembleEcc}
+    local-time-offset auto
+    international-table 1
+    reconfig-counter hash
+    label "${ensembleLabel}"
+    shortlabel "${ensembleShortLabel}"
+}
+
+`;
+
+  // --- Services ---
+  content += "services {\n";
+  for(let idx=0; idx<validRows.length; idx++){
+    const n = idx+1;
+    const row = validRows[idx];
+    const sid = row.querySelector(".sid").value.trim();
+    const shortlabel = row.querySelector(".labelShort").value.trim();
+    const longlabel = row.querySelector(".labelLong").value.trim();
+    const pty = row.querySelector(".pty").value;
+    const ecc = row.querySelector(".ecc").value;
+    const lic = row.querySelector(".lic").value;
+
+    if(shortlabel.length>8 || longlabel.length>16){
+      errorDiv.textContent = `ERROR: The short or long label of SERVICE ${n} exceeds 8 or 16 characters. Please verify and try again.`;
+      return;
+    }
+    if(sid!=="" && /[^0-9a-fA-F]/.test(sid)){
+      errorDiv.textContent = `ERROR: Incompatible character found in the SID value of SERVICE ${n}. Please verify and try again.`;
+      return;
+    }
+
+    content += `    srv-${String(n).padStart(2,'0')} {
+        id 0x${sid}
+        ecc ${ecc}
+        label "${longlabel}"
+        shortlabel "${shortlabel}"
+        pty ${pty}
+        pty-sd static
+        language ${lic}
+    }\n`;
+
+    // CU Calculation
+    const brText = row.querySelector(".bitrate").value;
+    const br = parseInt(brText);
+    const eep = row.querySelector(".eep").value;
+    const index = br/8 - 1;
+    totalCU += cuTable[eep][index] || 0;
+  }
+  if(totalCU>864){
+    errorDiv.textContent = "ERROR: The number of total CUs exceeds 864, which would prevent the multiplex from working. Please verify, reduce the amount of CUs and try again.";
+    return;
+  }
+  content += "}\n";
+
+  // --- Subchannels ---
+  content += "\nsubchannels {\n";
+  validRows.forEach((row, idx)=>{
+    const n = idx+1;
+    const bitrate = parseInt(row.querySelector(".bitrate").value);
+	const dabType = row.querySelector(".dabType").value;
+    const eep = row.querySelector(".eep").value;
+    const protection = protectionMap[eep];
+    const port = row.querySelector(".port").value;
+
+    content += `    sub-${String(n).padStart(2,'0')} {
+        type ${dabType}
+        bitrate ${bitrate}
+        id ${n}
+        protection ${protection}
+        inputproto edi
+        inputuri "tcp://127.0.0.1:${port}"
+        buffer-management prebuffering
+        buffer 40
+        prebuffering 20
+    }\n`;
+  });
+  content += "}\n";
+
+  // --- Components ---
+  content += "\ncomponents {\n";
+  validRows.forEach((row, idx)=>{
+    const n = idx+1;
+    content += `    comp-${String(n).padStart(2,'0')} {
+        service srv-${String(n).padStart(2,'0')}
+        subchannel sub-${String(n).padStart(2,'0')}
+        user-applications {
+            userapp "slideshow"
+        }
+    }\n`;
+  });
+  content += "}\n";
+
+  // --- Outputs ---
+  content += `
+outputs {
+    edi {
+        destinations {
+            edi_tcp {
+                protocol tcp
+                listenport 9201
+            }
+        }
+    }
+
+    ; Throttle output to real-time (one ETI frame every 24ms)
+    throttle "simul://"
+}
+`;
+
+  // --- Download the configuration file when clicking on the Generate button ---
+  const blob = new Blob([content], {type: "text/plain"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "odr-dabmux.info";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// --- Reset all fields and services on page refresh ---
+window.addEventListener("load", () => {
+  // Reset ensemble inputs
+  document.getElementById("eid").value = "";
+  document.getElementById("ensembleLabel").value = "";
+  document.getElementById("ensembleShortLabel").value = "";
+  document.getElementById("ensembleEcc").value = "0x00";
+
+  // Remove all services
+  const tbody = document.querySelector("#servicesTable tbody");
+  tbody.innerHTML = "";
+  serviceCount = 0;
+
+  updateCU(); // Resetting the CU value
+});
+</script>
+</body>
+</html>
