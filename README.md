@@ -54,3 +54,7 @@ Your multiplex should be ready to run now!
 
 
 • ```Port``` - The port that will be used for the "inputuri" value of your radio service. Leave the default value unless you really know what you're doing.
+
+# An example...
+
+![example](https://github.com/user-attachments/assets/b5b1483b-cddd-4fef-b30c-4cdfaf2599b5)
