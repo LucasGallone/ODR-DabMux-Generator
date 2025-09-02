@@ -12,6 +12,8 @@ Once you have generated and downloaded your configuration file with your desired
 <br>
 Your multiplex should be ready to run now!
 
+[Click here to visit the original page of the ODR-DabMux project.](https://github.com/Opendigitalradio/ODR-DabMux)
+
 # Fields that can be generated
 
 • ```Ensemble ID (EID)``` - Your multiplex identification code (4 characters max).
@@ -58,3 +60,9 @@ Your multiplex should be ready to run now!
 # An example...
 
 ![example](https://github.com/user-attachments/assets/b5b1483b-cddd-4fef-b30c-4cdfaf2599b5)
+
+# Original developers
+
+The original developers of ODR-DabMux are Matthias P. Braendli and Pascal Charest. Without their work, none of this would be possible.
+
+You can find all credits on the [original page of ODR-DabMux](https://github.com/Opendigitalradio/ODR-DabMux).
