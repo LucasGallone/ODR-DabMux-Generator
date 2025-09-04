@@ -8,6 +8,8 @@ The purpose is to simplify the creation of the configuration file, to automate t
 
 There is also a CUs calculator that runs in real-time and updates as you add your services, in order to be certain not to exceed the max Capacity Units value (864), and therefore to adapt the audio bitrate and the EEP protection of the services on a case-by-case basis, in order to remain within the standard.
 
+You can also import an existing configuration file in order to edit it. The only disadvantage is that the ECC and LIC values will be ignored since it is difficult to guess the exact country and language of the services just from the values. Therefore, you will have to add them manually from the interface before exporting your new configuration file.
+
 Once you have generated and downloaded your configuration file with your desired services list, place it in the config folder of ODR.
 <br>
 Your multiplex should be ready to run now!
@@ -55,7 +57,9 @@ Your multiplex should be ready to run now!
 • ```Language (for LIC)``` - Automatically generates the LIC (Language Identification Code) for your radio service, associated to the selected language in the list. Select the language used by the radio station.
 
 
-• ```Port``` - The port that will be used for the "inputuri" value of your radio service. Leave the default value unless you really know what you're doing.
+• ```Port``` - The port that will be used for the "inputuri" value of your radio service. Leave the default value unless you really want to use a customized one.
+
+When clicking on the "Generate and download the odr-dabmux.info file" button, you will be prompted to edit the ```managementport```, ```telnetport```, ```zmqendpoint``` and ```listenport``` values. If you're okay to use the default values (which are pre-filled), just ignore this step and click on the "Generate and download the file now" to export your configuration.
 
 # An example...
 
