@@ -16,7 +16,10 @@
 <h2><a href="https://github.com/Opendigitalradio" target="_blank">ODR</a>-DabMux.info Generator with real-time CU Calculator</h2>
 
 <!-- Ensemble Section -->
-<h3>Ensemble Configuration</h3>
+<div class="ensemble-header" style="display: flex; align-items: center; margin-bottom: 0;">
+  <h3 style="margin: 0; line-height: 1;">Ensemble Configuration</h3>
+  <button onclick="importConfig()" style="margin-left: auto;">Import configuration file to edit it (ECC and LIC values will be ignored)</button>
+</div>
 <table id="ensembleTable">
 <thead>
 <tr>
@@ -44,7 +47,7 @@
 <div id="cuIndicator">CU: 0/864</div>
 
 <button onclick="addService()">Add a new service</button>
-<button onclick="generateConfig()">Generate and download the odr-dabmux.info file</button>
+<button onclick="openPortModal()">Generate and download the odr-dabmux.info file</button>
 
 <div id="error" class="error"></div>
 
@@ -370,6 +373,12 @@ function generateConfig(){
   const errorDiv = document.getElementById("error");
   errorDiv.textContent = "";
 
+  // --- Récupérer les ports du modal ou utiliser les valeurs par défaut ---
+  const managementPort = window.customPorts?.managementPort || 12720;
+  const telnetPort = window.customPorts?.telnetPort || 12721;
+  const zmqEndpoint = window.customPorts?.zmqEndpoint || "tcp://lo:12722";
+  const listenPort = window.customPorts?.listenPort || 9201;
+
   // --- Ensemble validation ---
   const eid = document.getElementById("eid").value.trim();
   if(!/^[0-9a-fA-F]{1,4}$/.test(eid)){
@@ -413,12 +422,12 @@ function generateConfig(){
     nbframes 0
     syslog false
     tist false
-    managementport 12720
+    managementport ${managementPort}
 }
 
 remotecontrol {
-    telnetport 12721
-    zmqendpoint tcp://lo:12722
+    telnetport ${telnetPort}
+    zmqendpoint ${zmqEndpoint}
 }
 
 ensemble {
@@ -522,7 +531,7 @@ outputs {
         destinations {
             edi_tcp {
                 protocol tcp
-                listenport 9201
+                listenport ${listenPort}
             }
         }
     }
@@ -540,6 +549,100 @@ outputs {
   a.download = "odr-dabmux.info";
   a.click();
   URL.revokeObjectURL(url);
+  
+}
+
+// --- IMPORT CONFIGURATION FILE ---
+function importConfig() {
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = ".info";
+
+  input.onchange = e => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = evt => {
+      const content = evt.target.result;
+      parseConfig(content);
+    };
+    reader.readAsText(file);
+  };
+
+  input.click();
+}
+
+function parseConfig(content) {
+  // --- Reset current table ---
+  const tbody = document.querySelector("#servicesTable tbody");
+  tbody.innerHTML = "";
+  serviceCount = 0;
+
+  // --- Ensemble parsing ---
+  const eidMatch = content.match(/ensemble\s*{[^}]*id\s+0x([0-9a-fA-F]{4})/);
+  const labelMatch = content.match(/label\s+"([^"]+)"/);
+  const shortLabelMatch = content.match(/shortlabel\s+"([^"]+)"/);
+
+  if (eidMatch) document.getElementById("eid").value = eidMatch[1];
+  if (labelMatch) document.getElementById("ensembleLabel").value = labelMatch[1];
+  if (shortLabelMatch) document.getElementById("ensembleShortLabel").value = shortLabelMatch[1];
+
+  // --- Subchannels parsing ---
+  const subchannelRegex = /sub-(\d+)\s*{([^}]*)}/g;
+  const subchannels = {};
+  let subMatch;
+  while ((subMatch = subchannelRegex.exec(content)) !== null) {
+    const num = parseInt(subMatch[1], 10);
+    const body = subMatch[2];
+
+    const typeMatch = body.match(/type\s+(\w+)/);
+    const bitrateMatch = body.match(/bitrate\s+(\d+)/);
+    const protMatch = body.match(/protection\s+(\d+)/);
+    const portMatch = body.match(/inputuri\s+"tcp:\/\/127\.0\.0\.1:(\d+)"/);
+
+    subchannels[num] = {
+      type: typeMatch ? typeMatch[1] : "dabplus",
+      bitrate: bitrateMatch ? bitrateMatch[1] : "",
+      prot: protMatch ? protMatch[1] : "",
+      port: portMatch ? portMatch[1] : ""
+    };
+  }
+
+  // --- Services parsing ---
+  const serviceRegex = /srv-(\d+)\s*{([^}]*)}/g;
+  let match;
+  while ((match = serviceRegex.exec(content)) !== null) {
+    const serviceNum = parseInt(match[1], 10); // Numéro exact du service
+    const body = match[2];
+
+    const idMatch = body.match(/id\s+0x([0-9a-fA-F]{4})/);
+    const longLabelMatch = body.match(/label\s+"([^"]*)"/);
+    const shortLabelMatch = body.match(/shortlabel\s+"([^"]*)"/);
+    const ptyMatch = body.match(/pty\s+(\d+)/);
+
+    // --- Ajouter la ligne pour ce service ---
+    addService();
+    const row = document.querySelector(`#servicesTable tbody tr:last-child`);
+
+    // --- Remplir les données du service ---
+    if (idMatch) row.querySelector(".sid").value = idMatch[1];
+    if (longLabelMatch) row.querySelector(".labelLong").value = longLabelMatch[1];
+    if (shortLabelMatch) row.querySelector(".labelShort").value = shortLabelMatch[1];
+    if (ptyMatch) row.querySelector(".pty").value = ptyMatch[1];
+
+    // --- Associer le subchannel par le même numéro que le service ---
+    if (subchannels[serviceNum]) {
+      const sc = subchannels[serviceNum];
+      if (sc.bitrate) row.querySelector(".bitrate").value = sc.bitrate + " Kbps";
+      if (sc.prot) row.querySelector(".eep").value = sc.prot + "A";
+      if (sc.port) row.querySelector(".port").value = sc.port;
+      if (sc.type) row.querySelector(".dabType").value = sc.type;
+    }
+  }
+
+  // --- Mise à jour CU après import ---
+  updateCU();
 }
 
 // --- Reset all fields and services on page refresh ---
@@ -556,7 +659,67 @@ window.addEventListener("load", () => {
   serviceCount = 0;
 
   updateCU(); // Resetting the CU value
+
 });
+
+// --- Modal JS ---
+let generateAfterModal = false;
+
+function openPortModal() {
+  document.getElementById("portModal").style.display = "flex";
+}
+
+function closeModal(confirm) {
+  const modal = document.getElementById("portModal");
+  modal.style.display = "none";
+
+  if(confirm) {
+    // Stocke les valeurs personnalisées
+    window.customPorts = {
+      managementPort: Number(document.getElementById("modalManagementPort").value),
+      telnetPort: Number(document.getElementById("modalTelnetPort").value),
+      zmqEndpoint: document.getElementById("modalZmqEndpoint").value,
+      listenPort: Number(document.getElementById("modalListenPort").value)
+    };
+    generateConfig();
+  } else {
+    // Reset modal inputs to default
+    document.getElementById("modalManagementPort").value = 12720;
+    document.getElementById("modalTelnetPort").value = 12721;
+    document.getElementById("modalZmqEndpoint").value = "tcp://lo:12722";
+    document.getElementById("modalListenPort").value = 9201;
+  }
+}
+
 </script>
+
+<!-- Modal for editing ports before generating file -->
+<div id="portModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; 
+    background: rgba(0,0,0,0.5); justify-content:center; align-items:center; z-index:1000;">
+  <div style="background:white; padding:20px; border-radius:10px; max-width:500px; width:90%;">
+    <h3>One last step before generating the odr-dabmux.info file...<br>Edit the Configuration Ports (Default values are pre-filled)</h3>
+    <div style="margin-bottom:10px;">
+      <label>Management Port:</label>
+      <input type="number" id="modalManagementPort" value="12720" style="float:right;">
+    </div>
+    <div style="margin-bottom:10px;">
+      <label>Telnet Port:</label>
+      <input type="number" id="modalTelnetPort" value="12721" style="float:right;">
+    </div>
+    <div style="margin-bottom:10px;">
+      <label>ZMQ End Point:</label>
+      <input type="text" id="modalZmqEndpoint" value="tcp://lo:12722" style="float:right; width:31.5%;">
+    </div>
+    <div style="margin-bottom:10px;">
+      <label>EDI TCP Listen Port:</label>
+      <input type="number" id="modalListenPort" value="9201" style="float:right;">
+    </div>
+    <div style="text-align:right; margin-top:15px;">
+      <button onclick="closeModal(false)">Cancel</button>
+      <button onclick="closeModal(true)">Generate and download the file now</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
