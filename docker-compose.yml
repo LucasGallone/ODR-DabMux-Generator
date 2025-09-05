@@ -1,0 +1,10 @@
+   name: odr-dabmux
+
+   services:
+     generator:
+       image: jitesoft/lighttpd:1.4.81
+       restart: always
+       ports:
+         - "80:80"
+       volumes:
+         - .:/var/www/html
