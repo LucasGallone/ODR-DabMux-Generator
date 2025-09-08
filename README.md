@@ -28,7 +28,7 @@ Your multiplex should be ready to run now!
 
 <b><ins>You have 2 ways of running the generator:</b></ins>
 
-1. Remotely, via github:
+1. Remotely, via GitHub:
 
 [🢂 Click here to access the generator 🢀](https://lucasgallone.github.io/ODR-DabMux-Generator/)
 
