@@ -36,7 +36,7 @@ export const ServiceSettingsModal: React.FC<Props> = ({ service, onChange, onClo
               <option value="static">Static (Default)</option>
               <option value="dynamic">Dynamic</option>
             </select>
-            <p className="text-[10px] text-slate-500 mt-1">Indicates whether the Program Type is dynamic or not.</p>
+            <p className="text-[10px] text-slate-400 mt-1">Indicates whether the Program Type is dynamic or not.</p>
           </div>
 
           {/* Buffer Management */}
@@ -62,7 +62,7 @@ export const ServiceSettingsModal: React.FC<Props> = ({ service, onChange, onClo
                   onChange={(e) => onChange(service.id, 'bufferSize', parseInt(e.target.value))}
                   className="w-full bg-slate-900 border border-slate-600 rounded px-3 py-2 text-white outline-none focus:ring-1 focus:ring-emerald-500"
                 />
-                <p className="text-[10px] text-slate-500 mt-1">Default: 40</p>
+                <p className="text-[10px] text-slate-400 mt-1">Default: 40</p>
              </div>
 
              {/* Prebuffering Size */}
@@ -74,7 +74,7 @@ export const ServiceSettingsModal: React.FC<Props> = ({ service, onChange, onClo
                   onChange={(e) => onChange(service.id, 'prebufferingSize', parseInt(e.target.value))}
                   className="w-full bg-slate-900 border border-slate-600 rounded px-3 py-2 text-white outline-none focus:ring-1 focus:ring-emerald-500"
                 />
-                <p className="text-[10px] text-slate-500 mt-1">Default: 20</p>
+                <p className="text-[10px] text-slate-400 mt-1">Default: 20</p>
              </div>
           </div>
 
