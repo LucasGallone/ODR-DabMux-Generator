@@ -52,7 +52,7 @@ export const AdvancedSettingsModal: React.FC<Props> = ({
                   <option value={3}>Mode 3</option>
                   <option value={4}>Mode 4</option>
                 </select>
-                <p className="text-[10px] text-slate-500 mt-1">Standard broadcast mode is 1.</p>
+                <p className="text-[10px] text-slate-400 mt-1">Standard broadcast mode is 1.</p>
               </div>
 
               <div>
@@ -63,7 +63,7 @@ export const AdvancedSettingsModal: React.FC<Props> = ({
                   onChange={(e) => onGlobalChange('nbFrames', parseInt(e.target.value))}
                   className="w-full bg-slate-900 border border-slate-600 rounded px-3 py-2 text-white outline-none focus:ring-1 focus:ring-purple-500"
                 />
-                <p className="text-[10px] text-slate-500 mt-1">Set to 0 for unlimited generation.</p>
+                <p className="text-[10px] text-slate-400 mt-1">Set to 0 for unlimited generation.</p>
               </div>
 
               <div className="flex items-center space-x-3">
@@ -119,7 +119,7 @@ export const AdvancedSettingsModal: React.FC<Props> = ({
                   className="w-full bg-slate-900 border border-slate-600 rounded px-3 py-2 text-white outline-none focus:ring-1 focus:ring-purple-500"
                   placeholder="auto"
                 />
-                <p className="text-[10px] text-slate-500 mt-1">Leave on "auto" to use your system local time or indicate a value in hours (e.g. 1, 0.5).</p>
+                <p className="text-[10px] text-slate-400 mt-1">Leave on "auto" to use your system local time or indicate a value in hours (e.g. 1, 0.5).</p>
               </div>
 
               <div>
@@ -130,7 +130,7 @@ export const AdvancedSettingsModal: React.FC<Props> = ({
                   onChange={(e) => onEnsembleChange('internationalTable', parseInt(e.target.value))}
                   className="w-full bg-slate-900 border border-slate-600 rounded px-3 py-2 text-white outline-none focus:ring-1 focus:ring-purple-500"
                 />
-                <p className="text-[10px] text-slate-500 mt-1">Default is 1.</p>
+                <p className="text-[10px] text-slate-400 mt-1">Default is 1.</p>
               </div>
 
               <div className="md:col-span-2">
@@ -142,7 +142,7 @@ export const AdvancedSettingsModal: React.FC<Props> = ({
                   className="w-full bg-slate-900 border border-slate-600 rounded px-3 py-2 text-white outline-none focus:ring-1 focus:ring-purple-500"
                   placeholder="hash"
                 />
-                <p className="text-[10px] text-slate-500 mt-1">Leave on "hash" to let ODR-DabMux calculate a hash that depends on your MUX configuration, or set a number which will be used for the Count field in FIG0/7.</p>
+                <p className="text-[10px] text-slate-400 mt-1">Leave on "hash" to let ODR-DabMux calculate a hash that depends on your MUX configuration, or set a number which will be used for the Count field in FIG0/7.</p>
               </div>
 
             </div>
