@@ -1,3 +1,4 @@
+
 import { v4 as uuidv4 } from 'uuid';
 import { EnsembleInfo, ServiceInfo, GlobalSettings, AudioType, ProtectionLevel } from '../types';
 
@@ -94,9 +95,11 @@ export const parseConfigFile = (fileContent: string): {
 
   // 3. Parse Ensemble
   const ensembleBlock = extractBlockContent(cleanContent, 'ensemble') || '';
+  const ensembleEcc = extractHexValue(ensembleBlock, 'ecc');
+  
   const ensemble: EnsembleInfo = {
     eid: extractHexValue(ensembleBlock, 'id') || '',
-    country: 'None / Undefined', // Ignoring ECC as requested
+    country: ensembleEcc || 'None / Undefined', // Use hex value (custom) if found, else default
     label: extractValue(ensembleBlock, 'label'),
     shortLabel: extractValue(ensembleBlock, 'shortlabel'),
     // Advanced defaults or parsed
@@ -186,8 +189,8 @@ export const parseConfigFile = (fileContent: string): {
           type: subData.type === 'dabplus' ? AudioType.DAB_PLUS : AudioType.DAB_MP2, // Handle loose match
           bitrate: subData.bitrate,
           protection: subData.protection,
-          country: 'None / Undefined', // Ignoring ECC as requested
-          language: 'None / Undefined', // Ignoring LIC as requested
+          country: sData.ecc || 'None / Undefined', // Use hex (custom) or default
+          language: sData.language || 'None / Undefined', // Use hex (custom) or default
           port: subData.port,
           isPortCustom: true, // Imported configs should keep their ports
           // Advanced
