@@ -63,10 +63,6 @@ docker compose up --detach
 
 When clicking on the "Generate and download the odr-dabmux.info file" button, you will be prompted to edit the ```managementport```, ```telnetport```, ```zmqendpoint``` and ```listenport``` values. If you're okay to use the default values (which are pre-filled), just ignore this step and click on the "Generate and download the file now" to export your configuration.
 
-## An example
-
-![example](https://github.com/user-attachments/assets/b5b1483b-cddd-4fef-b30c-4cdfaf2599b5)
-
 ## Original developers
 
 The original developers of ODR-DabMux are Matthias P. Braendli and
