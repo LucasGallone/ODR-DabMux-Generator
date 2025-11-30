@@ -5,6 +5,8 @@
 This is an HTML generator to easily create the configuration file of a DAB+
 multiplex with all settings, including the services list, which can then be used by `odr-dabmux` from Opendigitalradio.
 
+You can export your configuration in either .info or .mux format.
+
 The purpose is to simplify the creation of the configuration file, to automate
 the assignment of the ECC and LIC values ​​by choosing the country and language
 of each of your services (Rather than looking for this information in the
