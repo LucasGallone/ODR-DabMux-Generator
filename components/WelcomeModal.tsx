@@ -1,3 +1,4 @@
+
 import React, { useRef } from 'react';
 import { FileUp, Plus, Radio } from 'lucide-react';
 
@@ -48,7 +49,6 @@ export const WelcomeModal: React.FC<Props> = ({ onCreateNew, onImport }) => {
                 </div>
                 <h3 className="text-lg font-bold text-white mb-1">Import an existing configuration</h3>
                 <p className="text-xs text-slate-400">Edit .info or .mux files</p>
-                <p className="text-[10px] text-slate-500 mt-1">(ECC and LIC values will be ignored)</p>
                 <input 
                     type="file" 
                     ref={fileInputRef} 
