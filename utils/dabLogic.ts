@@ -195,7 +195,7 @@ export const generateConfigFile = (ensemble: EnsembleInfo, services: ServiceInfo
 
   // Components Section
   lines.push('components {');
-  services.forEach((srv, index) => {
+  services.forEach((_, index) => {
     const compName = `comp-${pad(index + 1)}`;
     const srvName = `srv-${pad(index + 1)}`;
     const subName = `sub-${pad(index + 1)}`;
