@@ -48,7 +48,7 @@ export const CUProgressBar: React.FC<Props> = ({ services, totalCU }) => {
             ) : (
                 <>
                     <Activity className={`w-5 h-5 mr-2 ${isOverLimit ? 'text-red-500' : 'text-emerald-500'}`} />
-                    <span className="text-sm font-semibold text-slate-300">Real-time CU calculator (Capacity Units)</span>
+                    <span className="text-sm font-semibold text-slate-300">Real-time CUs calculator (Capacity Units)</span>
                 </>
             )}
         </div>
