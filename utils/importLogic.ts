@@ -1,6 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
 import { EnsembleInfo, ServiceInfo, GlobalSettings, AudioType, ProtectionLevel } from '../types';
-import { COUNTRIES, LANGUAGES } from '../constants';
 
 // Helper to extract content within a balanced brace block
 const extractBlockContent = (text: string, blockName: string): string | null => {
