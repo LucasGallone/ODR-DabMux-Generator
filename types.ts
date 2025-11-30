@@ -3,6 +3,10 @@ export enum ProtectionLevel {
   EEP_2A = 'EEP-2A',
   EEP_3A = 'EEP-3A',
   EEP_4A = 'EEP-4A',
+  EEP_1B = 'EEP-1B',
+  EEP_2B = 'EEP-2B',
+  EEP_3B = 'EEP-3B',
+  EEP_4B = 'EEP-4B',
 }
 
 export enum AudioType {

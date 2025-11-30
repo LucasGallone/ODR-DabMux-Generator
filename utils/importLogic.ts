@@ -144,13 +144,22 @@ export const parseConfigFile = (fileContent: string): {
       const inputUri = extractValue(block, 'inputuri'); // "tcp://127.0.0.1:9001"
       const portMatch = inputUri.match(/:(\d+)"?$/);
       
-      // Map numerical protection to Enum
       const protVal = parseInt(extractValue(block, 'protection'), 10);
+      const protProfile = extractValue(block, 'protection-profile');
+      
       let protection = ProtectionLevel.EEP_3A;
-      if (protVal === 1) protection = ProtectionLevel.EEP_1A;
-      if (protVal === 2) protection = ProtectionLevel.EEP_2A;
-      if (protVal === 3) protection = ProtectionLevel.EEP_3A;
-      if (protVal === 4) protection = ProtectionLevel.EEP_4A;
+
+      if (protProfile === 'EEP_B') {
+        if (protVal === 1) protection = ProtectionLevel.EEP_1B;
+        if (protVal === 2) protection = ProtectionLevel.EEP_2B;
+        if (protVal === 3) protection = ProtectionLevel.EEP_3B;
+        if (protVal === 4) protection = ProtectionLevel.EEP_4B;
+      } else {
+        if (protVal === 1) protection = ProtectionLevel.EEP_1A;
+        if (protVal === 2) protection = ProtectionLevel.EEP_2A;
+        if (protVal === 3) protection = ProtectionLevel.EEP_3A;
+        if (protVal === 4) protection = ProtectionLevel.EEP_4A;
+      }
 
       rawSubchannels[subName] = {
         type: extractValue(block, 'type') as AudioType,

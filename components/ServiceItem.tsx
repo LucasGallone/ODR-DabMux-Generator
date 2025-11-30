@@ -1,10 +1,11 @@
-import React from 'react';
+
+import React, { useState } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { ServiceInfo, AudioType, ProtectionLevel } from '../types';
 import { PTY_LIST, BITRATES_KBPS, COUNTRIES, LANGUAGES } from '../constants';
-import { calculateCU, validateEtsiCompliance } from '../utils/dabLogic';
-import { Trash2, Radio, GripVertical, Sliders, ThumbsUp, AlertTriangle, RefreshCw } from 'lucide-react';
+import { calculateCU, validateEtsiCompliance, isProtectionB } from '../utils/dabLogic';
+import { Trash2, Radio, GripVertical, Sliders, ThumbsUp, AlertTriangle, RefreshCw, AlertCircle, ChevronDown } from 'lucide-react';
 
 interface Props {
   id: string; // Needed for DnD
@@ -16,8 +17,15 @@ interface Props {
 }
 
 export const ServiceItem: React.FC<Props> = ({ id, index, service, onChange, onRemove, onOpenSettings }) => {
+  const [isBitrateOpen, setIsBitrateOpen] = useState(false);
+
   const currentCU = calculateCU(service.bitrate, service.protection, service.type);
   const isCompliant = validateEtsiCompliance(service.type, service.protection, service.bitrate);
+  
+  // Validation for B-Profile (must be multiple of 32)
+  const isBProfile = isProtectionB(service.protection);
+  const isBitrateValidForB = service.bitrate % 32 === 0;
+  const showBProfileError = isBProfile && !isBitrateValidForB;
 
   // Check if custom values are active
   const isCustomCountry = !COUNTRIES.some(c => c.name === service.country);
@@ -37,9 +45,21 @@ export const ServiceItem: React.FC<Props> = ({ id, index, service, onChange, onR
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
-    zIndex: isDragging ? 50 : 'auto',
+    // Ensure the card pops up when dragging OR when the dropdown is open
+    zIndex: isDragging ? 50 : (isBitrateOpen ? 40 : 'auto'),
     position: 'relative' as const,
   };
+
+  const protectionOptions = [
+    ProtectionLevel.EEP_1A,
+    ProtectionLevel.EEP_2A,
+    ProtectionLevel.EEP_3A,
+    ProtectionLevel.EEP_4A,
+    ProtectionLevel.EEP_1B,
+    ProtectionLevel.EEP_2B,
+    ProtectionLevel.EEP_3B,
+    ProtectionLevel.EEP_4B,
+  ];
 
   return (
     <div 
@@ -156,17 +176,41 @@ export const ServiceItem: React.FC<Props> = ({ id, index, service, onChange, onR
                  <option value={AudioType.DAB_MP2}>DAB (MP2)</option>
                </select>
             </div>
-            <div>
+            {/* Custom Bitrate Dropdown */}
+            <div className="relative">
                <label className="text-xs text-slate-400 block mb-1">Bitrate</label>
-               <select
-                 value={service.bitrate}
-                 onChange={(e) => onChange(service.id, 'bitrate', parseInt(e.target.value))}
-                 className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs focus:ring-1 focus:ring-blue-500 outline-none text-slate-300"
+               <button
+                 type="button"
+                 onClick={() => setIsBitrateOpen(!isBitrateOpen)}
+                 className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-left flex justify-between items-center focus:ring-1 focus:ring-blue-500 outline-none text-slate-300 hover:border-slate-500 transition-colors"
                >
-                 {BITRATES_KBPS.map(b => (
-                   <option key={b} value={b}>{b} Kbps</option>
-                 ))}
-               </select>
+                 <span>{service.bitrate} Kbps</span>
+                 <ChevronDown className="w-3 h-3 text-slate-500" />
+               </button>
+               
+               {isBitrateOpen && (
+                 <>
+                    {/* Invisible backdrop to handle click-outside */}
+                    <div className="fixed inset-0 z-10 cursor-default" onClick={() => setIsBitrateOpen(false)} />
+                    
+                    {/* Custom Dropdown List */}
+                    <div className="absolute top-full left-0 w-full mt-1 bg-slate-900 border border-slate-700 rounded shadow-xl max-h-60 overflow-y-auto z-20">
+                      {BITRATES_KBPS.map(b => (
+                        <button
+                          key={b}
+                          type="button"
+                          onClick={() => {
+                            onChange(service.id, 'bitrate', b);
+                            setIsBitrateOpen(false);
+                          }}
+                          className={`w-full text-left px-3 py-1.5 text-xs hover:bg-blue-600 hover:text-white transition-colors border-b border-slate-800 last:border-0 ${service.bitrate === b ? 'bg-blue-600 text-white' : 'text-slate-300'}`}
+                        >
+                          {b} Kbps
+                        </button>
+                      ))}
+                    </div>
+                 </>
+               )}
             </div>
         </div>
 
@@ -178,7 +222,7 @@ export const ServiceItem: React.FC<Props> = ({ id, index, service, onChange, onR
              onChange={(e) => onChange(service.id, 'protection', e.target.value)}
              className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs focus:ring-1 focus:ring-blue-500 outline-none text-slate-300"
            >
-             {Object.values(ProtectionLevel).map(l => (
+             {protectionOptions.map(l => (
                <option key={l} value={l}>{l}</option>
              ))}
            </select>
@@ -284,18 +328,27 @@ export const ServiceItem: React.FC<Props> = ({ id, index, service, onChange, onR
         </div>
       </div>
 
-      {/* Compliance Check */}
-      <div className="mt-4 pt-3 border-t border-slate-700 pl-0 sm:pl-11">
-        {isCompliant ? (
-            <div className="flex items-center text-emerald-400 text-xs font-medium">
-                <ThumbsUp className="w-4 h-4 mr-2" />
-                The configuration of this service complies with ETSI requirements.
-            </div>
+      {/* Compliance Checks */}
+      <div className="mt-4 pt-3 border-t border-slate-700 pl-0 sm:pl-11 space-y-2">
+        {/* B-Profile Error (Multiples of 32) takes precedence */}
+        {showBProfileError ? (
+          <div className="flex items-center text-red-400 text-xs font-medium">
+             <AlertCircle className="w-4 h-4 mr-2 text-red-500" />
+             This protection level can only be used for bitrates that are multiples of 32! (e.g. 64, 96, 128, ...)
+          </div>
         ) : (
-            <div className="flex items-center text-red-400 text-xs font-medium">
-                <AlertTriangle className="w-4 h-4 mr-2 text-yellow-500" />
-                The configuration of this service does not comply with ETSI requirements.
-            </div>
+          /* Only show ETSI Check if NO B-Profile Error */
+          isCompliant ? (
+              <div className="flex items-center text-emerald-400 text-xs font-medium">
+                  <ThumbsUp className="w-4 h-4 mr-2" />
+                  The configuration of this service complies with ETSI requirements.
+              </div>
+          ) : (
+              <div className="flex items-center text-red-400 text-xs font-medium">
+                  <AlertTriangle className="w-4 h-4 mr-2 text-yellow-500" />
+                  The configuration of this service does not comply with ETSI requirements.
+              </div>
+          )
         )}
       </div>
 

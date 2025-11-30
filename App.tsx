@@ -27,7 +27,7 @@ import { ConfirmationModal } from './components/ConfirmationModal';
 import { WelcomeModal } from './components/WelcomeModal';
 import { AdvancedSettingsModal } from './components/AdvancedSettingsModal';
 import { ServiceSettingsModal } from './components/ServiceSettingsModal';
-import { calculateCU, generateConfigFile, validateEtsiCompliance } from './utils/dabLogic';
+import { calculateCU, generateConfigFile, validateEtsiCompliance, isProtectionB } from './utils/dabLogic';
 import { parseConfigFile } from './utils/importLogic';
 import { MAX_CU } from './constants';
 import { Radio, Plus, FileCode, Info } from 'lucide-react';
@@ -252,7 +252,28 @@ const App: React.FC = () => {
       return;
     }
 
-    // 2. Check Duplicate SIDs
+    // 2. Check B-Profile Validity (Blocker)
+    const invalidBProfiles: string[] = [];
+    services.forEach((s, index) => {
+      if (isProtectionB(s.protection)) {
+        if (s.bitrate % 32 !== 0) {
+          invalidBProfiles.push(`Service #${index + 1} (${s.label || 'Unnamed'})`);
+        }
+      }
+    });
+
+    if (invalidBProfiles.length > 0) {
+      setErrorMessage(
+        "It is impossible to generate the configuration file.\n\n" +
+        "The following services use an EEP-B protection level with an invalid bitrate (must be multiple of 32):\n" + 
+        invalidBProfiles.map(s => `• ${s}`).join("\n") + 
+        "\n\nPlease correct the bitrate for these services."
+      );
+      setShowError(true);
+      return;
+    }
+
+    // 3. Check Duplicate SIDs
     const sids = services.map(s => s.sid).filter(sid => sid.trim() !== '');
     const uniqueSids = new Set(sids);
     
@@ -273,13 +294,13 @@ const App: React.FC = () => {
       return;
     }
 
-    // 3. Check ETSI Compliance
+    // 4. Check ETSI Compliance
     if (hasEtsiIssues()) {
       setShowEtsiWarning(true);
       return;
     }
 
-    // 4. Proceed
+    // 5. Proceed
     setShowPortConfig(true);
   };
 

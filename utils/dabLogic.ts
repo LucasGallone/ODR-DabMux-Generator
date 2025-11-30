@@ -1,26 +1,38 @@
 import { AudioType, ProtectionLevel, ServiceInfo, EnsembleInfo, GlobalSettings, OutputFormat } from '../types';
 import { COUNTRIES, LANGUAGES } from '../constants';
 
+export const isProtectionB = (p: ProtectionLevel): boolean => {
+  return [
+    ProtectionLevel.EEP_1B,
+    ProtectionLevel.EEP_2B,
+    ProtectionLevel.EEP_3B,
+    ProtectionLevel.EEP_4B
+  ].includes(p);
+};
+
 /**
  * Approximates the CU usage for a given bitrate and protection level.
- * This is a simplification. Real DAB+ CU allocation depends on subchannel size modulo constraints.
  * 
- * Formula (approximate):
- * 1 CU = 64 bits. Frame = 24ms.
- * Total bits/frame = Bitrate(kbps) * 24.
- * Gross bits = Net bits / Code Rate.
- * CU = Gross bits / 64.
- * 
- * Code Rates:
- * EEP-1A = 1/4
- * EEP-2A = 3/8
- * EEP-3A = 1/2
- * EEP-4A = 3/4
+ * EEP-A follows standard tables.
+ * EEP-B follows specific formulas based on 32kbps chunks.
  */
 export const calculateCU = (bitrate: number, protection: ProtectionLevel, type: AudioType): number => {
-  // Common Lookup Table for standard bitrates (More accurate than raw formula for UI display)
-  // Focusing on DAB+ (AAC) which is most common usage.
   
+  // Handle EEP-B Profiles first (Specific formulas)
+  if (isProtectionB(protection)) {
+    // Formula only valid for multiples of 32. 
+    // If not multiple, we calculate pro-rata but the UI will show error.
+    const multiple = bitrate / 32;
+    
+    switch (protection) {
+      case ProtectionLevel.EEP_1B: return Math.ceil(multiple * 27);
+      case ProtectionLevel.EEP_2B: return Math.ceil(multiple * 21);
+      case ProtectionLevel.EEP_3B: return Math.ceil(multiple * 18);
+      case ProtectionLevel.EEP_4B: return Math.ceil(multiple * 15);
+    }
+  }
+
+  // Handle DAB+ (AAC) EEP-A
   if (type === AudioType.DAB_PLUS) {
     const table: Record<string, Record<number, number>> = {
       [ProtectionLevel.EEP_1A]: { 
@@ -42,7 +54,7 @@ export const calculateCU = (bitrate: number, protection: ProtectionLevel, type: 
     }
   }
 
-  // Fallback formula calculation
+  // Fallback formula calculation for EEP-A standard rates if not in lookup
   let rate = 0.5;
   switch (protection) {
     case ProtectionLevel.EEP_1A: rate = 0.25; break;
@@ -55,15 +67,40 @@ export const calculateCU = (bitrate: number, protection: ProtectionLevel, type: 
   const grossBits = bitsPerFrame / rate;
   let cu = Math.ceil(grossBits / 64);
   
-  // DAB rules often require CU to be multiple of specific integers (like 6, 12, etc depending on profile)
-  // We'll leave the raw calc for non-standard values as a best guess.
   return cu;
 };
 
 export const validateEtsiCompliance = (type: AudioType, protection: ProtectionLevel, bitrate: number): boolean => {
-  // Lower bound is always 8kbps
+  // Lower bound is always 8kbps base check
   if (bitrate < 8) return false;
 
+  // Specific Logic for EEP-B Profiles
+  if (isProtectionB(protection)) {
+    // Requirements: Minimum 36 Kbps for all B profiles in this context
+    if (bitrate < 36) return false;
+
+    if (type === AudioType.DAB_PLUS) {
+      // DAB+ (AAC) Limits
+      switch (protection) {
+        case ProtectionLevel.EEP_1B: return bitrate <= 160;
+        case ProtectionLevel.EEP_2B: return bitrate <= 192;
+        case ProtectionLevel.EEP_3B: return bitrate <= 256;
+        case ProtectionLevel.EEP_4B: return bitrate <= 288;
+        default: return false;
+      }
+    } else {
+      // DAB (MP2) Limits
+      switch (protection) {
+        case ProtectionLevel.EEP_1B: return bitrate <= 224;
+        case ProtectionLevel.EEP_2B: return bitrate <= 288;
+        case ProtectionLevel.EEP_3B: return bitrate <= 352;
+        case ProtectionLevel.EEP_4B: return bitrate <= 384;
+        default: return false;
+      }
+    }
+  }
+
+  // Logic for EEP-A Profiles (Existing logic preserved)
   let limit = 0;
 
   if (type === AudioType.DAB_MP2) {
@@ -84,19 +121,17 @@ export const validateEtsiCompliance = (type: AudioType, protection: ProtectionLe
       default: return false;
     }
   }
-
+  
   return bitrate <= limit;
 };
 
 // Helper to find the code based on the unique country name
-// If name is not found in predefined list, assume it is a custom hex code and return it as-is
 const getEccCode = (name: string): string => {
   const country = COUNTRIES.find(c => c.name === name);
   return country ? country.code : (name || '00');
 };
 
 // Helper to find the code based on the unique language name
-// If name is not found in predefined list, assume it is a custom hex code and return it as-is
 const getLanguageCode = (name: string): string => {
   const lang = LANGUAGES.find(l => l.name === name);
   return lang ? lang.code : (name || '00');
@@ -165,23 +200,33 @@ export const generateConfigFile = (ensemble: EnsembleInfo, services: ServiceInfo
   services.forEach((srv, index) => {
     const subName = `sub-${pad(index + 1)}`;
     
-    // Convert EEP Enum to ODR config format integer (Standard mappings)
+    // Map Protection Level to ID and Profile
     let protectionId = 3;
+    let isB = false;
+
+    // A Profiles
     if (srv.protection === ProtectionLevel.EEP_1A) protectionId = 1;
     if (srv.protection === ProtectionLevel.EEP_2A) protectionId = 2;
     if (srv.protection === ProtectionLevel.EEP_3A) protectionId = 3;
     if (srv.protection === ProtectionLevel.EEP_4A) protectionId = 4;
+    
+    // B Profiles
+    if (srv.protection === ProtectionLevel.EEP_1B) { protectionId = 1; isB = true; }
+    if (srv.protection === ProtectionLevel.EEP_2B) { protectionId = 2; isB = true; }
+    if (srv.protection === ProtectionLevel.EEP_3B) { protectionId = 3; isB = true; }
+    if (srv.protection === ProtectionLevel.EEP_4B) { protectionId = 4; isB = true; }
 
     lines.push(`    ${subName} {`);
     lines.push(`        type ${srv.type}`);
     lines.push(`        bitrate ${srv.bitrate}`);
-    lines.push(`        id ${index + 1}`); // Sequential subchannel ID matching array index + 1
+    lines.push(`        id ${index + 1}`); 
     
-    // For .mux format, do not add protection line.
-    // For .info format, keep it.
-    if (format === 'info') {
-      lines.push(`        protection ${protectionId}`);
+    // For B-Profiles, we specify the profile ALWAYS, as EEP-A is the default implied
+    if (isB) {
+      lines.push(`        protection-profile EEP_B`);
     }
+
+    lines.push(`        protection ${protectionId}`);
 
     lines.push(`        inputproto edi`);
     lines.push(`        inputuri "tcp://127.0.0.1:${srv.port}"`);
@@ -224,7 +269,6 @@ export const generateConfigFile = (ensemble: EnsembleInfo, services: ServiceInfo
   lines.push('');
   lines.push('    ; Throttle output to real-time (one ETI frame every 24ms)');
   
-  // .mux format includes a zmq output line in the example
   if (format === 'mux') {
     lines.push('    zmq "zmq+tcp://*:18081"');
   }
