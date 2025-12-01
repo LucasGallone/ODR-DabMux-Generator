@@ -76,8 +76,8 @@ export const validateEtsiCompliance = (type: AudioType, protection: ProtectionLe
 
   // Specific Logic for EEP-B Profiles
   if (isProtectionB(protection)) {
-    // Requirements: Minimum 36 Kbps for all B profiles in this context
-    if (bitrate < 36) return false;
+    // Requirements: Minimum 32 Kbps for all B profiles
+    if (bitrate < 32) return false;
 
     if (type === AudioType.DAB_PLUS) {
       // DAB+ (AAC) Limits
@@ -221,7 +221,7 @@ export const generateConfigFile = (ensemble: EnsembleInfo, services: ServiceInfo
     lines.push(`        bitrate ${srv.bitrate}`);
     lines.push(`        id ${index + 1}`); 
     
-    // For B-Profiles, we specify the profile ALWAYS, as EEP-A is the default implied
+    // For B-Profiles, we specify the profile ALWAYS
     if (isB) {
       lines.push(`        protection-profile EEP_B`);
     }
