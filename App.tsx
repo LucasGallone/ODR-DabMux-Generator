@@ -263,11 +263,20 @@ const App: React.FC = () => {
     });
 
     if (invalidBProfiles.length > 0) {
+      const isPlural = invalidBProfiles.length > 1;
+      const header = isPlural 
+        ? "The following services use an EEP-B protection level with an invalid bitrate (must be multiple of 32):"
+        : "The following service uses an EEP-B protection level with an invalid bitrate (must be multiple of 32):";
+      
+      const footer = isPlural
+        ? "Please correct the bitrate for these services."
+        : "Please correct the bitrate for this service.";
+
       setErrorMessage(
         "It is impossible to generate the configuration file.\n\n" +
-        "The following services use an EEP-B protection level with an invalid bitrate (must be multiple of 32):\n" + 
+        header + "\n" + 
         invalidBProfiles.map(s => `• ${s}`).join("\n") + 
-        "\n\nPlease correct the bitrate for these services."
+        "\n\n" + footer
       );
       setShowError(true);
       return;
