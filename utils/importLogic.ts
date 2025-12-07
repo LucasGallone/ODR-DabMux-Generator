@@ -38,27 +38,32 @@ const extractValue = (text: string, key: string): string => {
 };
 
 const extractHexValue = (text: string, key: string): string => {
-  const val = extractValue(text, key);
+  let val = extractValue(text, key);
   if (!val) return '';
+  
+  // Ensure no surrounding whitespace interferes
+  val = val.trim();
 
   // 1. If it starts with 0x, treat as explicit Hex
   if (val.toLowerCase().startsWith('0x')) {
-    return val.replace(/^0x/i, '').toUpperCase();
+    return val.replace(/^0x/i, '').toUpperCase().padStart(2, '0');
   }
 
-  // 2. If it contains hex characters (a-f), assume Hex (even without 0x prefix common in some sloppy configs)
+  // 2. If it contains hex characters (a-f), it MUST be Hex
+  // (e.g. "E1" or "1f")
   if (/[a-fA-F]/.test(val)) {
-    return val.toUpperCase();
+    return val.toUpperCase().padStart(2, '0');
   }
 
-  // 3. If it is purely numeric digits, treat as Decimal and convert to Hex
+  // 3. If it is purely numeric digits (and hasn't been caught by 0x or a-f),
+  // treat as DECIMAL and convert to Hex.
   // Example: Input "21" (decimal) -> Output "15" (hex)
   if (/^\d+$/.test(val)) {
     const dec = parseInt(val, 10);
-    return dec.toString(16).toUpperCase();
+    return dec.toString(16).toUpperCase().padStart(2, '0');
   }
 
-  // Fallback
+  // Fallback: Return as is (upper case)
   return val.toUpperCase();
 };
 
@@ -67,7 +72,7 @@ export const parseConfigFile = (fileContent: string): {
   services: ServiceInfo[], 
   settings: GlobalSettings 
 } => {
-  // 1. Clean content (remove comments)
+  // 1. Clean content (remove comments starting with ; or #)
   const cleanContent = fileContent.replace(/([;#].*)/g, '');
 
   // 2. Parse Global Settings
@@ -119,7 +124,7 @@ export const parseConfigFile = (fileContent: string): {
   
   const ensemble: EnsembleInfo = {
     eid: extractHexValue(ensembleBlock, 'id') || '',
-    country: ensembleEcc || 'None / Undefined', // Use hex directly. If empty, default to placeholder name to avoid empty input
+    country: ensembleEcc || 'None / Undefined', // Use hex directly.
     label: extractValue(ensembleBlock, 'label'),
     shortLabel: extractValue(ensembleBlock, 'shortlabel'),
     // Advanced defaults or parsed
