@@ -1,6 +1,7 @@
 
 import { v4 as uuidv4 } from 'uuid';
 import { EnsembleInfo, ServiceInfo, GlobalSettings, AudioType, ProtectionLevel } from '../types';
+import { COUNTRIES, LANGUAGES } from '../constants';
 
 // Helper to extract content within a balanced brace block
 const extractBlockContent = (text: string, blockName: string): string | null => {
@@ -39,7 +40,27 @@ const extractValue = (text: string, key: string): string => {
 
 const extractHexValue = (text: string, key: string): string => {
   const val = extractValue(text, key);
-  return val.replace(/^0x/i, '').toUpperCase();
+  if (!val) return '';
+
+  // 1. If it starts with 0x, treat as explicit Hex
+  if (val.toLowerCase().startsWith('0x')) {
+    return val.replace(/^0x/i, '').toUpperCase();
+  }
+
+  // 2. If it contains hex characters (a-f), assume Hex (even without 0x prefix common in some sloppy configs)
+  if (/[a-fA-F]/.test(val)) {
+    return val.toUpperCase();
+  }
+
+  // 3. If it is purely numeric digits, treat as Decimal and convert to Hex
+  // Example: Input "21" (decimal) -> Output "15" (hex)
+  if (/^\d+$/.test(val)) {
+    const dec = parseInt(val, 10);
+    return dec.toString(16).toUpperCase();
+  }
+
+  // Fallback
+  return val.toUpperCase();
 };
 
 export const parseConfigFile = (fileContent: string): { 
@@ -99,7 +120,7 @@ export const parseConfigFile = (fileContent: string): {
   
   const ensemble: EnsembleInfo = {
     eid: extractHexValue(ensembleBlock, 'id') || '',
-    country: ensembleEcc || 'None / Undefined', // Use hex value (custom) if found, else default
+    country: ensembleEcc || 'None / Undefined', // Use hex directly. If empty, default to placeholder name to avoid empty input
     label: extractValue(ensembleBlock, 'label'),
     shortLabel: extractValue(ensembleBlock, 'shortlabel'),
     // Advanced defaults or parsed
@@ -198,8 +219,8 @@ export const parseConfigFile = (fileContent: string): {
           type: subData.type === 'dabplus' ? AudioType.DAB_PLUS : AudioType.DAB_MP2, // Handle loose match
           bitrate: subData.bitrate,
           protection: subData.protection,
-          country: sData.ecc || 'None / Undefined', // Use hex (custom) or default
-          language: sData.language || 'None / Undefined', // Use hex (custom) or default
+          country: sData.ecc || 'None / Undefined', // Use hex directly
+          language: sData.language || 'None / Undefined', // Use hex directly
           port: subData.port,
           isPortCustom: true, // Imported configs should keep their ports
           // Advanced
