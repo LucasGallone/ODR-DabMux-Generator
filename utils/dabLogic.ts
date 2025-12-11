@@ -1,5 +1,26 @@
+
 import { AudioType, ProtectionLevel, ServiceInfo, EnsembleInfo, GlobalSettings, OutputFormat } from '../types';
 import { COUNTRIES, LANGUAGES } from '../constants';
+
+// Table mapping Bitrate to CU size for UEP Levels 1-5 (DAB MP2)
+// Index 0 corresponds to UEP-1, Index 4 to UEP-5.
+// 0 values indicate invalid combinations (though rarely checked strictly here, we return 0)
+const UEP_CU_TABLE: Record<number, number[]> = {
+  32:  [27, 24, 21, 18, 16],
+  48:  [42, 36, 32, 27, 24],
+  56:  [48, 42, 39, 32, 27],
+  64:  [54, 48, 42, 36, 32],
+  80:  [70, 60, 54, 45, 40],
+  96:  [84, 72, 64, 54, 48],
+  112: [96, 84, 75, 63, 56],
+  128: [112, 96, 84, 72, 64],
+  160: [140, 120, 108, 90, 80],
+  192: [168, 144, 128, 108, 96],
+  224: [198, 168, 150, 126, 112],
+  256: [224, 192, 168, 144, 128],
+  320: [280, 240, 216, 180, 160],
+  384: [336, 288, 256, 216, 192]
+};
 
 export const isProtectionB = (p: ProtectionLevel): boolean => {
   return [
@@ -10,14 +31,44 @@ export const isProtectionB = (p: ProtectionLevel): boolean => {
   ].includes(p);
 };
 
+export const isUEP = (p: ProtectionLevel): boolean => {
+  return [
+    ProtectionLevel.UEP_1,
+    ProtectionLevel.UEP_2,
+    ProtectionLevel.UEP_3,
+    ProtectionLevel.UEP_4,
+    ProtectionLevel.UEP_5
+  ].includes(p);
+};
+
 /**
  * Approximates the CU usage for a given bitrate and protection level.
  * 
  * EEP-A follows standard tables.
  * EEP-B follows specific formulas based on 32kbps chunks.
+ * UEP follows specific lookup tables.
  */
 export const calculateCU = (bitrate: number, protection: ProtectionLevel, type: AudioType): number => {
   
+  // Handle UEP Profiles
+  if (isUEP(protection)) {
+    const tableValues = UEP_CU_TABLE[bitrate];
+    if (tableValues) {
+      // Map enum to index: UEP_1 -> 0, ..., UEP_5 -> 4
+      let index = 0;
+      switch (protection) {
+        case ProtectionLevel.UEP_1: index = 0; break;
+        case ProtectionLevel.UEP_2: index = 1; break;
+        case ProtectionLevel.UEP_3: index = 2; break;
+        case ProtectionLevel.UEP_4: index = 3; break;
+        case ProtectionLevel.UEP_5: index = 4; break;
+      }
+      return tableValues[index] || 0;
+    }
+    // Fallback if bitrate not in UEP table (though validation should catch this)
+    return 0; 
+  }
+
   // Handle EEP-B Profiles first (Specific formulas)
   if (isProtectionB(protection)) {
     // Formula only valid for multiples of 32. 
@@ -73,6 +124,14 @@ export const calculateCU = (bitrate: number, protection: ProtectionLevel, type: 
 export const validateEtsiCompliance = (type: AudioType, protection: ProtectionLevel, bitrate: number): boolean => {
   // Lower bound is always 8kbps base check
   if (bitrate < 8) return false;
+
+  // UEP Validation
+  if (isUEP(protection)) {
+    // UEP is strictly for DAB (MP2)
+    if (type !== AudioType.DAB_MP2) return false;
+    // Check if bitrate exists in our table
+    return UEP_CU_TABLE.hasOwnProperty(bitrate);
+  }
 
   // Specific Logic for EEP-B Profiles
   if (isProtectionB(protection)) {
@@ -202,7 +261,7 @@ export const generateConfigFile = (ensemble: EnsembleInfo, services: ServiceInfo
     
     // Map Protection Level to ID and Profile
     let protectionId = 3;
-    let isB = false;
+    let profile = '';
 
     // A Profiles
     if (srv.protection === ProtectionLevel.EEP_1A) protectionId = 1;
@@ -211,19 +270,26 @@ export const generateConfigFile = (ensemble: EnsembleInfo, services: ServiceInfo
     if (srv.protection === ProtectionLevel.EEP_4A) protectionId = 4;
     
     // B Profiles
-    if (srv.protection === ProtectionLevel.EEP_1B) { protectionId = 1; isB = true; }
-    if (srv.protection === ProtectionLevel.EEP_2B) { protectionId = 2; isB = true; }
-    if (srv.protection === ProtectionLevel.EEP_3B) { protectionId = 3; isB = true; }
-    if (srv.protection === ProtectionLevel.EEP_4B) { protectionId = 4; isB = true; }
+    if (srv.protection === ProtectionLevel.EEP_1B) { protectionId = 1; profile = 'EEP_B'; }
+    if (srv.protection === ProtectionLevel.EEP_2B) { protectionId = 2; profile = 'EEP_B'; }
+    if (srv.protection === ProtectionLevel.EEP_3B) { protectionId = 3; profile = 'EEP_B'; }
+    if (srv.protection === ProtectionLevel.EEP_4B) { protectionId = 4; profile = 'EEP_B'; }
+
+    // UEP Profiles
+    if (srv.protection === ProtectionLevel.UEP_1) { protectionId = 1; profile = 'UEP'; }
+    if (srv.protection === ProtectionLevel.UEP_2) { protectionId = 2; profile = 'UEP'; }
+    if (srv.protection === ProtectionLevel.UEP_3) { protectionId = 3; profile = 'UEP'; }
+    if (srv.protection === ProtectionLevel.UEP_4) { protectionId = 4; profile = 'UEP'; }
+    if (srv.protection === ProtectionLevel.UEP_5) { protectionId = 5; profile = 'UEP'; }
 
     lines.push(`    ${subName} {`);
     lines.push(`        type ${srv.type}`);
     lines.push(`        bitrate ${srv.bitrate}`);
     lines.push(`        id ${index + 1}`); 
     
-    // For B-Profiles, we specify the profile ALWAYS
-    if (isB) {
-      lines.push(`        protection-profile EEP_B`);
+    // Explicitly write profile if B or UEP
+    if (profile) {
+      lines.push(`        protection-profile ${profile}`);
     }
 
     lines.push(`        protection ${protectionId}`);
