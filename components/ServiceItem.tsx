@@ -59,6 +59,11 @@ export const ServiceItem: React.FC<Props> = ({ id, index, service, onChange, onR
     ProtectionLevel.EEP_2B,
     ProtectionLevel.EEP_3B,
     ProtectionLevel.EEP_4B,
+    ProtectionLevel.UEP_1,
+    ProtectionLevel.UEP_2,
+    ProtectionLevel.UEP_3,
+    ProtectionLevel.UEP_4,
+    ProtectionLevel.UEP_5,
   ];
 
   return (
@@ -216,7 +221,7 @@ export const ServiceItem: React.FC<Props> = ({ id, index, service, onChange, onR
 
         {/* Protection */}
         <div className="md:col-span-4">
-           <label className="text-xs text-slate-400 block mb-1">EEP (Protection)</label>
+           <label className="text-xs text-slate-400 block mb-1">EEP / UEP (Protection)</label>
            <select
              value={service.protection}
              onChange={(e) => onChange(service.id, 'protection', e.target.value)}
