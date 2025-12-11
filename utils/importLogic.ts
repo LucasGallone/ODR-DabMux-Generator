@@ -179,11 +179,21 @@ export const parseConfigFile = (fileContent: string): {
         if (protVal === 2) protection = ProtectionLevel.EEP_2B;
         if (protVal === 3) protection = ProtectionLevel.EEP_3B;
         if (protVal === 4) protection = ProtectionLevel.EEP_4B;
+      } else if (protProfile === 'UEP') {
+        if (protVal === 1) protection = ProtectionLevel.UEP_1;
+        if (protVal === 2) protection = ProtectionLevel.UEP_2;
+        if (protVal === 3) protection = ProtectionLevel.UEP_3;
+        if (protVal === 4) protection = ProtectionLevel.UEP_4;
+        if (protVal === 5) protection = ProtectionLevel.UEP_5;
       } else {
+        // EEP-A or Implicit Fallback
         if (protVal === 1) protection = ProtectionLevel.EEP_1A;
         if (protVal === 2) protection = ProtectionLevel.EEP_2A;
         if (protVal === 3) protection = ProtectionLevel.EEP_3A;
         if (protVal === 4) protection = ProtectionLevel.EEP_4A;
+        
+        // Implicit UEP detection: EEP only goes up to 4, so 5 must be UEP
+        if (protVal === 5) protection = ProtectionLevel.UEP_5;
       }
 
       rawSubchannels[subName] = {
