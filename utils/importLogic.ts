@@ -169,31 +169,38 @@ export const parseConfigFile = (fileContent: string): {
       const inputUri = extractValue(block, 'inputuri'); // "tcp://127.0.0.1:9001"
       const portMatch = inputUri.match(/:(\d+)"?$/);
       
-      const protVal = parseInt(extractValue(block, 'protection'), 10);
-      const protProfile = extractValue(block, 'protection-profile');
+      const protValStr = extractValue(block, 'protection');
+      const protVal = parseInt(protValStr, 10);
       
-      let protection = ProtectionLevel.EEP_3A;
+      // Normalize profile detection (case insensitive)
+      let protProfile = extractValue(block, 'protection-profile').toUpperCase().trim();
+      
+      let protection = ProtectionLevel.EEP_3A; // Default
 
-      if (protProfile === 'EEP_B') {
+      // Priority 1: Explicit Protection 5 is ALWAYS UEP-5 (EEP only goes up to 4)
+      if (protVal === 5) {
+        protection = ProtectionLevel.UEP_5;
+      } 
+      // Priority 2: Check Profiles
+      else if (protProfile.includes('EEP_B') || protProfile.includes('EEP-B')) {
         if (protVal === 1) protection = ProtectionLevel.EEP_1B;
         if (protVal === 2) protection = ProtectionLevel.EEP_2B;
         if (protVal === 3) protection = ProtectionLevel.EEP_3B;
         if (protVal === 4) protection = ProtectionLevel.EEP_4B;
-      } else if (protProfile === 'UEP') {
+      } 
+      else if (protProfile.includes('UEP')) {
         if (protVal === 1) protection = ProtectionLevel.UEP_1;
         if (protVal === 2) protection = ProtectionLevel.UEP_2;
         if (protVal === 3) protection = ProtectionLevel.UEP_3;
         if (protVal === 4) protection = ProtectionLevel.UEP_4;
         if (protVal === 5) protection = ProtectionLevel.UEP_5;
-      } else {
-        // EEP-A or Implicit Fallback
+      } 
+      // Priority 3: Fallback (Implicit EEP-A)
+      else {
         if (protVal === 1) protection = ProtectionLevel.EEP_1A;
         if (protVal === 2) protection = ProtectionLevel.EEP_2A;
         if (protVal === 3) protection = ProtectionLevel.EEP_3A;
         if (protVal === 4) protection = ProtectionLevel.EEP_4A;
-        
-        // Implicit UEP detection: EEP only goes up to 4, so 5 must be UEP
-        if (protVal === 5) protection = ProtectionLevel.UEP_5;
       }
 
       rawSubchannels[subName] = {
