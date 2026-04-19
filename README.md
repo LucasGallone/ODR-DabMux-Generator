@@ -5,6 +5,11 @@
 This is an HTML generator to easily create the configuration file of a DAB+
 multiplex with all settings, including the services list, which can then be used by `odr-dabmux` from Opendigitalradio.
 
+
+<img width="900" height="473" alt="odr-dabmux-generator-rsz" src="https://github.com/user-attachments/assets/4ee2cac7-3572-4bb7-a6c5-616fb3fd39cf" />
+
+- - -
+
 You can export your configuration in either .info or .mux format.
 
 The purpose is to simplify the creation of the configuration file, to automate
@@ -31,7 +36,7 @@ Follow the instructions on the interface and have fun creating your own multiple
 1. Remotely, via GitHub:
 
 [🢂 Click here to access the generator 🢀](https://lucasgallone.github.io/ODR-DabMux-Generator/)
-
+- - -
 2. Locally, via a container:
 
 ```bash
