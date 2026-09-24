@@ -239,7 +239,10 @@ export const generateConfigFile = (ensemble: EnsembleInfo, services: ServiceInfo
 
   // Services Section
   lines.push('services {');
-  services.forEach((srv, index) => {
+  const audioServices = services.filter(s => !s.isSpi);
+  const spiServices = services.filter(s => s.isSpi);
+
+  audioServices.forEach((srv, index) => {
     const srvName = `srv-${pad(index + 1)}`;
     lines.push(`    ${srvName} {`);
     lines.push(`        id 0x${srv.sid.toLowerCase()}`);
@@ -251,12 +254,26 @@ export const generateConfigFile = (ensemble: EnsembleInfo, services: ServiceInfo
     lines.push(`        language 0x${getLanguageCode(srv.language).toLowerCase()}`);
     lines.push(`    }`);
   });
+
+  if (audioServices.length > 0 && spiServices.length > 0) {
+    lines.push('');
+  }
+
+  spiServices.forEach((srv, index) => {
+    if (index > 0) lines.push('');
+    const srvName = spiServices.length === 1 ? 'srv-spi' : `srv-spi-${pad(index + 1)}`;
+    lines.push(`    ${srvName} {`);
+    lines.push(`        id 0x${srv.sid.toLowerCase()}`);
+    lines.push(`        label "${srv.label}"`);
+    lines.push(`        shortlabel "${srv.shortLabel}"`);
+    lines.push(`    }`);
+  });
   lines.push('}');
   lines.push('');
 
   // Subchannels Section
   lines.push('subchannels {');
-  services.forEach((srv, index) => {
+  audioServices.forEach((srv, index) => {
     const subName = `sub-${pad(index + 1)}`;
     
     // Map Protection Level to ID and Profile
@@ -301,12 +318,53 @@ export const generateConfigFile = (ensemble: EnsembleInfo, services: ServiceInfo
     lines.push(`        prebuffering ${srv.prebufferingSize}`);
     lines.push(`    }`);
   });
+
+  if (audioServices.length > 0 && spiServices.length > 0) {
+    lines.push('');
+  }
+
+  spiServices.forEach((srv, index) => {
+    if (index > 0) lines.push('');
+    const subName = spiServices.length === 1 ? 'sub-spi' : `sub-spi-${pad(index + 1)}`;
+    const subId = audioServices.length + index + 1;
+
+    let protectionId = 3;
+    let profile = 'EEP_A';
+
+    if (srv.protection === ProtectionLevel.EEP_1A) { protectionId = 1; profile = 'EEP_A'; }
+    if (srv.protection === ProtectionLevel.EEP_2A) { protectionId = 2; profile = 'EEP_A'; }
+    if (srv.protection === ProtectionLevel.EEP_3A) { protectionId = 3; profile = 'EEP_A'; }
+    if (srv.protection === ProtectionLevel.EEP_4A) { protectionId = 4; profile = 'EEP_A'; }
+
+    if (srv.protection === ProtectionLevel.EEP_1B) { protectionId = 1; profile = 'EEP_B'; }
+    if (srv.protection === ProtectionLevel.EEP_2B) { protectionId = 2; profile = 'EEP_B'; }
+    if (srv.protection === ProtectionLevel.EEP_3B) { protectionId = 3; profile = 'EEP_B'; }
+    if (srv.protection === ProtectionLevel.EEP_4B) { protectionId = 4; profile = 'EEP_B'; }
+
+    if (srv.protection === ProtectionLevel.UEP_1) { protectionId = 1; profile = 'UEP'; }
+    if (srv.protection === ProtectionLevel.UEP_2) { protectionId = 2; profile = 'UEP'; }
+    if (srv.protection === ProtectionLevel.UEP_3) { protectionId = 3; profile = 'UEP'; }
+    if (srv.protection === ProtectionLevel.UEP_4) { protectionId = 4; profile = 'UEP'; }
+    if (srv.protection === ProtectionLevel.UEP_5) { protectionId = 5; profile = 'UEP'; }
+
+    const inputUri = srv.inputUri?.trim() || '/home/odr/ODR-mmbTools/spi-output.dat';
+
+    lines.push(`    ${subName} {`);
+    lines.push(`        type ${srv.spiType || 'packet'}`);
+    lines.push(`        bitrate ${srv.bitrate}`);
+    lines.push(`        id ${subId}`);
+    lines.push(`        protection-profile ${profile}`);
+    lines.push(`        protection ${protectionId}`);
+    lines.push(`        inputproto file`);
+    lines.push(`        inputuri "${inputUri}"`);
+    lines.push(`    }`);
+  });
   lines.push('}');
   lines.push('');
 
   // Components Section
   lines.push('components {');
-  services.forEach((_, index) => {
+  audioServices.forEach((_, index) => {
     const compName = `comp-${pad(index + 1)}`;
     const srvName = `srv-${pad(index + 1)}`;
     const subName = `sub-${pad(index + 1)}`;
@@ -317,6 +375,31 @@ export const generateConfigFile = (ensemble: EnsembleInfo, services: ServiceInfo
     lines.push(`        user-applications {`);
     lines.push(`            userapp "slideshow"`);
     lines.push(`        }`);
+    lines.push(`    }`);
+  });
+
+  if (audioServices.length > 0 && spiServices.length > 0) {
+    lines.push('');
+  }
+
+  spiServices.forEach((srv, index) => {
+    if (index > 0) lines.push('');
+    const compName = spiServices.length === 1 ? 'comp-spi' : `comp-spi-${pad(index + 1)}`;
+    const srvName = spiServices.length === 1 ? 'srv-spi' : `srv-spi-${pad(index + 1)}`;
+    const subName = spiServices.length === 1 ? 'sub-spi' : `sub-spi-${pad(index + 1)}`;
+
+    const address = srv.spiAddress?.trim() || '0x1';
+    const datagroup = srv.spiDatagroup !== false ? 'true' : 'false';
+
+    lines.push(`    ${compName} {`);
+    lines.push(`        type 60`);
+    lines.push(`        service ${srvName}`);
+    lines.push(`        subchannel ${subName}`);
+    lines.push(`        user-applications {`);
+    lines.push(`            userapp "spi"`);
+    lines.push(`        }`);
+    lines.push(`        address ${address}`);
+    lines.push(`        datagroup ${datagroup}`);
     lines.push(`    }`);
   });
   lines.push('}');

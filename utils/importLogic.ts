@@ -203,8 +203,13 @@ export const parseConfigFile = (fileContent: string): {
         if (protVal === 4) protection = ProtectionLevel.EEP_4A;
       }
 
+      const rawType = extractValue(block, 'type').toLowerCase();
+      const rawInputUri = extractValue(block, 'inputuri');
+
       rawSubchannels[subName] = {
-        type: extractValue(block, 'type') as AudioType,
+        type: rawType as AudioType,
+        rawType: rawType,
+        inputUri: rawInputUri,
         bitrate: parseInt(extractValue(block, 'bitrate'), 10) || 96,
         protection: protection,
         port: portMatch ? parseInt(portMatch[1], 10) : 9001,
@@ -231,25 +236,63 @@ export const parseConfigFile = (fileContent: string): {
         const sData = rawServices[srvRef];
         const subData = rawSubchannels[subRef];
 
-        finalServices.push({
-          id: uuidv4(),
-          sid: sData.sid,
-          label: sData.label,
-          shortLabel: sData.shortLabel,
-          pty: sData.pty || '0',
-          type: subData.type === 'dabplus' ? AudioType.DAB_PLUS : AudioType.DAB_MP2, // Handle loose match
-          bitrate: subData.bitrate,
-          protection: subData.protection,
-          country: sData.ecc || 'None / Undefined', // Use hex directly
-          language: sData.language || 'None / Undefined', // Use hex directly
-          port: subData.port,
-          isPortCustom: true, // Imported configs should keep their ports
-          // Advanced
-          ptySd: sData.ptySd,
-          bufferManagement: subData.bufferManagement,
-          bufferSize: subData.bufferSize,
-          prebufferingSize: subData.prebufferingSize
-        });
+        const isSpi = srvRef.includes('spi') || 
+                      subRef.includes('spi') || 
+                      compName.includes('spi') ||
+                      subData.rawType === 'packet' || 
+                      subData.rawType === 'enhancedpacket' || 
+                      block.includes('userapp "spi"') ||
+                      block.includes("userapp 'spi'");
+
+        if (isSpi) {
+          const compAddress = extractValue(block, 'address') || '0x1';
+          const compDatagroupRaw = extractValue(block, 'datagroup');
+          const compDatagroup = compDatagroupRaw ? compDatagroupRaw.toLowerCase() !== 'false' : true;
+
+          finalServices.push({
+            id: uuidv4(),
+            sid: sData.sid,
+            label: sData.label,
+            shortLabel: sData.shortLabel,
+            pty: '0',
+            type: AudioType.DAB_PLUS,
+            isSpi: true,
+            spiType: (subData.rawType === 'enhancedpacket' ? 'enhancedpacket' : 'packet'),
+            inputUri: subData.inputUri || '/home/odr/ODR-mmbTools/spi-output.dat',
+            spiAddress: compAddress,
+            spiDatagroup: compDatagroup,
+            bitrate: [8, 16, 24, 32].includes(subData.bitrate) ? subData.bitrate : 32,
+            protection: subData.protection,
+            country: 'None / Undefined',
+            language: 'None / Undefined',
+            port: 0,
+            isPortCustom: false,
+            ptySd: 'static',
+            bufferManagement: 'prebuffering',
+            bufferSize: 40,
+            prebufferingSize: 20
+          });
+        } else {
+          finalServices.push({
+            id: uuidv4(),
+            sid: sData.sid,
+            label: sData.label,
+            shortLabel: sData.shortLabel,
+            pty: sData.pty || '0',
+            type: subData.type === 'dabplus' ? AudioType.DAB_PLUS : AudioType.DAB_MP2, // Handle loose match
+            bitrate: subData.bitrate,
+            protection: subData.protection,
+            country: sData.ecc || 'None / Undefined', // Use hex directly
+            language: sData.language || 'None / Undefined', // Use hex directly
+            port: subData.port,
+            isPortCustom: true, // Imported configs should keep their ports
+            // Advanced
+            ptySd: sData.ptySd,
+            bufferManagement: subData.bufferManagement,
+            bufferSize: subData.bufferSize,
+            prebufferingSize: subData.prebufferingSize
+          });
+        }
       }
     }
   }
