@@ -20,6 +20,8 @@ export enum AudioType {
   DAB_MP2 = 'dab',
 }
 
+export type SpiType = 'packet' | 'enhancedpacket';
+
 export type OutputFormat = 'info' | 'mux';
 
 export interface GlobalSettings {
@@ -62,6 +64,13 @@ export interface ServiceInfo {
   language: string;
   port: number;
   isPortCustom: boolean; // Tracks if the user has manually set the port
+
+  // SPI Service specific
+  isSpi?: boolean;
+  spiType?: SpiType; // 'packet' | 'enhancedpacket'
+  inputUri?: string; // file path (default: /home/odr/ODR-mmbTools/spi-output.dat)
+  spiAddress?: string; // default: 0x1, max 4 chars
+  spiDatagroup?: boolean; // default: true
 
   // Advanced Service Settings
   ptySd: 'static' | 'dynamic';

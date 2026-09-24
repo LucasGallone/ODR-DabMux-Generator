@@ -128,9 +128,9 @@ const App: React.FC = () => {
   };
 
   const addService = () => {
-    // Calculate next available default port based on current count
-    // Base is 9001. If we have 2 services, next is 9003.
-    const newPort = 9001 + services.length;
+    // Calculate next available default port based on current count of audio services
+    const audioServicesCount = services.filter(s => !s.isSpi).length;
+    const newPort = 9001 + audioServicesCount;
 
     const newService: ServiceInfo = {
       id: uuidv4(),
@@ -145,7 +145,36 @@ const App: React.FC = () => {
       language: 'None / Undefined', // Default to name
       port: newPort,
       isPortCustom: false,
+      isSpi: false,
       // Advanced defaults
+      ptySd: 'static',
+      bufferManagement: 'prebuffering',
+      bufferSize: 40,
+      prebufferingSize: 20
+    };
+
+    setServices(prev => [...prev, newService]);
+  };
+
+  const addSpiService = () => {
+    const newService: ServiceInfo = {
+      id: uuidv4(),
+      sid: '',
+      label: '',
+      shortLabel: '',
+      pty: '0',
+      type: AudioType.DAB_PLUS,
+      isSpi: true,
+      spiType: 'packet',
+      inputUri: '/home/odr/ODR-mmbTools/spi-output.dat',
+      spiAddress: '0x1',
+      spiDatagroup: true,
+      bitrate: 16,
+      protection: ProtectionLevel.EEP_3A,
+      country: 'None / Undefined',
+      language: 'None / Undefined',
+      port: 0,
+      isPortCustom: false,
       ptySd: 'static',
       bufferManagement: 'prebuffering',
       bufferSize: 40,
@@ -186,14 +215,21 @@ const App: React.FC = () => {
         const newIndex = items.findIndex((item) => item.id === over.id);
         const newOrder = arrayMove(items, oldIndex, newIndex);
 
-        // Renumber ports based on new index IF they are not custom
-        return newOrder.map((service, index) => {
-          if (!service.isPortCustom) {
-            return {
-              ...service,
-              port: 9001 + index
-            };
+        // Renumber ports based on audio index IF they are not custom
+        let audioIndex = 0;
+        return newOrder.map((service) => {
+          if (service.isSpi) {
+            return service;
           }
+          if (!service.isPortCustom) {
+            const updated = {
+              ...service,
+              port: 9001 + audioIndex
+            };
+            audioIndex++;
+            return updated;
+          }
+          audioIndex++;
           return service;
         });
       });
@@ -213,7 +249,10 @@ const App: React.FC = () => {
 
   // Helper to check for ETSI non-compliance
   const hasEtsiIssues = () => {
-    return services.some(s => !validateEtsiCompliance(s.type, s.protection, s.bitrate));
+    return services.some(s => {
+      if (s.isSpi) return false;
+      return !validateEtsiCompliance(s.type, s.protection, s.bitrate);
+    });
   };
 
   // Flow handlers
@@ -228,11 +267,12 @@ const App: React.FC = () => {
 
     // Check Services
     services.forEach((s, index) => {
-      const prefix = `Service #${index + 1}`;
+      const prefix = s.isSpi ? `Service #${index + 1} (SPI)` : `Service #${index + 1}`;
       if (!s.sid.trim()) missingFields.push(`${prefix}: Service ID (SID)`);
       if (!s.label.trim()) missingFields.push(`${prefix}: Long Label`);
       if (!s.shortLabel.trim()) missingFields.push(`${prefix}: Short Label`);
-      if (!s.port || isNaN(s.port)) missingFields.push(`${prefix}: Port`);
+      if (!s.isSpi && (!s.port || isNaN(s.port))) missingFields.push(`${prefix}: Port`);
+      if (s.isSpi && !s.inputUri?.trim()) missingFields.push(`${prefix}: Input URI (file path)`);
     });
 
     if (missingFields.length > 0) {
@@ -384,20 +424,29 @@ const App: React.FC = () => {
                <Radio className="w-5 h-5 mr-2" />
                Services ({services.length})
              </h2>
-             <button 
-               onClick={addService}
-               className="flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-all shadow-lg hover:shadow-blue-500/20 active:scale-95"
-             >
-               <Plus className="w-4 h-4 mr-2" />
-               Add Service
-             </button>
+             <div className="flex items-center space-x-3">
+               <button 
+                 onClick={addSpiService}
+                 className="flex items-center px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-lg transition-all shadow-lg hover:shadow-purple-500/20 active:scale-95 text-sm font-semibold"
+               >
+                 <Plus className="w-4 h-4 mr-2" />
+                 Add SPI Service
+               </button>
+               <button 
+                 onClick={addService}
+                 className="flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-all shadow-lg hover:shadow-blue-500/20 active:scale-95 text-sm font-semibold"
+               >
+                 <Plus className="w-4 h-4 mr-2" />
+                 Add Service
+               </button>
+             </div>
           </div>
 
           {services.length === 0 ? (
             <div className="bg-slate-800/50 border border-slate-700 border-dashed rounded-xl p-10 text-center text-slate-400">
                <Info className="w-10 h-10 mx-auto mb-3 text-slate-500" />
                <p>No service configured.</p>
-               <p className="text-sm">Click on "Add Service" to start.</p>
+               <p className="text-sm">Click on "Add Service" or "Add SPI Service" to start.</p>
             </div>
           ) : (
             <>
@@ -426,16 +475,27 @@ const App: React.FC = () => {
                   </SortableContext>
                 </DndContext>
                 
-                {/* Button at the bottom of the list */}
-                <button 
-                   onClick={addService}
-                   className="w-full mt-4 border-2 border-dashed border-slate-700 hover:border-blue-500/50 hover:bg-slate-800/50 text-slate-400 hover:text-blue-400 font-medium py-4 rounded-xl transition-all flex items-center justify-center group"
-                >
-                   <div className="bg-slate-800 group-hover:bg-blue-600/20 p-2 rounded-full mr-3 transition-colors">
-                      <Plus className="w-5 h-5" />
-                   </div>
-                   Add a new service
-                </button>
+                {/* Buttons at the bottom of the list */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+                  <button 
+                     onClick={addSpiService}
+                     className="border-2 border-dashed border-slate-700 hover:border-purple-500/50 hover:bg-slate-800/50 text-slate-400 hover:text-purple-400 font-medium py-3.5 rounded-xl transition-all flex items-center justify-center group"
+                  >
+                     <div className="bg-slate-800 group-hover:bg-purple-600/20 p-2 rounded-full mr-3 transition-colors">
+                        <Plus className="w-5 h-5" />
+                     </div>
+                     Add a new SPI service
+                  </button>
+                  <button 
+                     onClick={addService}
+                     className="border-2 border-dashed border-slate-700 hover:border-blue-500/50 hover:bg-slate-800/50 text-slate-400 hover:text-blue-400 font-medium py-3.5 rounded-xl transition-all flex items-center justify-center group"
+                  >
+                     <div className="bg-slate-800 group-hover:bg-blue-600/20 p-2 rounded-full mr-3 transition-colors">
+                        <Plus className="w-5 h-5" />
+                     </div>
+                     Add a new service
+                  </button>
+                </div>
             </>
           )}
         </section>

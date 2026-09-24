@@ -42,6 +42,9 @@ export const BITRATES_KBPS = [
   288, 320, 352, 384
 ];
 
+export const SPI_BITRATES_KBPS = [8, 16, 24, 32];
+export const DEFAULT_SPI_INPUT_URI = '/home/odr/ODR-mmbTools/spi-output.dat';
+
 export const MAX_CU = 864;
 
 export interface CodeDefinition {
