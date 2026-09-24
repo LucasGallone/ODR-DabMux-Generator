@@ -5,7 +5,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { ServiceInfo, AudioType, ProtectionLevel } from '../types';
 import { PTY_LIST, BITRATES_KBPS, COUNTRIES, LANGUAGES } from '../constants';
 import { calculateCU, validateEtsiCompliance, isProtectionB } from '../utils/dabLogic';
-import { Trash2, Radio, GripVertical, Sliders, ThumbsUp, AlertTriangle, RefreshCw, AlertCircle, ChevronDown } from 'lucide-react';
+import { Trash2, Radio, GripVertical, Sliders, ThumbsUp, AlertTriangle, RefreshCw, AlertCircle, ChevronDown, Database } from 'lucide-react';
 
 interface Props {
   id: string; // Needed for DnD
@@ -70,7 +70,11 @@ export const ServiceItem: React.FC<Props> = ({ id, index, service, onChange, onR
     <div 
       ref={setNodeRef}
       style={style}
-      className="bg-slate-800 p-4 rounded-lg border border-slate-700 transition-all hover:border-slate-600 shadow-md"
+      className={`p-4 rounded-lg border transition-all shadow-md ${
+        service.isSpi 
+          ? 'bg-slate-800/90 border-purple-900/60 hover:border-purple-600/70 ring-1 ring-purple-500/20' 
+          : 'bg-slate-800 border-slate-700 hover:border-slate-600'
+      }`}
     >
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-3 gap-2">
         
@@ -87,32 +91,45 @@ export const ServiceItem: React.FC<Props> = ({ id, index, service, onChange, onR
           </button>
 
           <h3 className="font-semibold text-slate-200 flex items-center">
-            <Radio className="w-4 h-4 mr-2 text-indigo-400" />
+            {service.isSpi ? (
+              <Database className="w-4 h-4 mr-2 text-purple-400" />
+            ) : (
+              <Radio className="w-4 h-4 mr-2 text-indigo-400" />
+            )}
             Service #{index}{service.label ? ':' : ''} <span className="text-white ml-2">{service.label}</span>
+            {service.isSpi && (
+              <span className="ml-2.5 px-2 py-0.5 text-[10px] font-bold rounded bg-purple-900/60 text-purple-300 border border-purple-700/60 uppercase tracking-wide">
+                SPI
+              </span>
+            )}
           </h3>
         </div>
         
         <div className="flex items-center space-x-3 self-end sm:self-auto">
-          {/* Extra Settings Button */}
-          <button 
-             onClick={() => onOpenSettings(service.id)}
-             className="flex items-center px-3 py-1 bg-slate-700 hover:bg-slate-600 text-slate-200 text-[10px] rounded border border-slate-600 transition-colors uppercase font-medium tracking-wide whitespace-nowrap"
-             title="Extra Settings"
-          >
-            <Sliders className="w-3 h-3 mr-1" />
-            Extra Settings
-          </button>
+          {!service.isSpi && (
+            <>
+              {/* Extra Settings Button */}
+              <button 
+                 onClick={() => onOpenSettings(service.id)}
+                 className="flex items-center px-3 py-1 bg-slate-700 hover:bg-slate-600 text-slate-200 text-[10px] rounded border border-slate-600 transition-colors uppercase font-medium tracking-wide whitespace-nowrap"
+                 title="Extra Settings"
+              >
+                <Sliders className="w-3 h-3 mr-1" />
+                Extra Settings
+              </button>
 
-          {/* Port Input moved here */}
-          <div className="flex items-center bg-slate-900 rounded border border-slate-700 px-2 py-1">
-            <span className="text-[10px] text-slate-500 mr-2 uppercase font-bold tracking-wider">Port</span>
-            <input
-                type="number"
-                value={service.port}
-                onChange={(e) => onChange(service.id, 'port', parseInt(e.target.value))}
-                className="w-14 bg-transparent text-xs text-white outline-none text-right font-mono pr-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-            />
-          </div>
+              {/* Port Input moved here */}
+              <div className="flex items-center bg-slate-900 rounded border border-slate-700 px-2 py-1">
+                <span className="text-[10px] text-slate-500 mr-2 uppercase font-bold tracking-wider">Port</span>
+                <input
+                    type="number"
+                    value={service.port}
+                    onChange={(e) => onChange(service.id, 'port', parseInt(e.target.value))}
+                    className="w-14 bg-transparent text-xs text-white outline-none text-right font-mono pr-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                />
+              </div>
+            </>
+          )}
 
           <span className="text-xs font-mono bg-emerald-900 text-emerald-200 px-2 py-1.5 rounded whitespace-nowrap">
             {currentCU} CU
@@ -127,211 +144,324 @@ export const ServiceItem: React.FC<Props> = ({ id, index, service, onChange, onR
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-3 pl-0 sm:pl-11">
-        
-        {/* Row 1 */}
-        {/* SID */}
-        <div className="md:col-span-2">
-           <label className="text-xs text-slate-400 block mb-1">Service ID (SID)</label>
-           <input
-             type="text"
-             maxLength={4}
-             value={service.sid}
-             onChange={(e) => onChange(service.id, 'sid', e.target.value.toUpperCase())}
-             className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs uppercase focus:ring-1 focus:ring-blue-500 outline-none"
-           />
-        </div>
+      {service.isSpi ? (
+        /* SPI Service Fields */
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-3 pl-0 sm:pl-11">
+          {/* Row 1 */}
+          <div className="md:col-span-2">
+             <label className="text-xs text-slate-400 block mb-1">Service ID (SID)</label>
+             <input
+               type="text"
+               maxLength={8}
+               value={service.sid}
+               onChange={(e) => onChange(service.id, 'sid', e.target.value.toUpperCase())}
+               className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs uppercase focus:ring-1 focus:ring-purple-500 outline-none"
+             />
+          </div>
 
-        {/* Long Label */}
-        <div className="md:col-span-6">
-           <label className="text-xs text-slate-400 block mb-1">Long Label (Max. 16 characters)</label>
-           <input
-             type="text"
-             maxLength={16}
-             value={service.label}
-             onChange={(e) => onChange(service.id, 'label', e.target.value)}
-             className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs focus:ring-1 focus:ring-blue-500 outline-none"
-           />
-        </div>
-        
-        {/* Short Label */}
-        <div className="md:col-span-4">
-           <label className="text-xs text-slate-400 block mb-1">Short Label (Max. 8 characters)</label>
-           <input
-             type="text"
-             maxLength={8}
-             value={service.shortLabel}
-             onChange={(e) => onChange(service.id, 'shortLabel', e.target.value)}
-             className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs focus:ring-1 focus:ring-blue-500 outline-none"
-           />
-        </div>
+          <div className="md:col-span-6">
+             <label className="text-xs text-slate-400 block mb-1">Long Label (Max. 16 characters)</label>
+             <input
+               type="text"
+               maxLength={16}
+               value={service.label}
+               onChange={(e) => onChange(service.id, 'label', e.target.value)}
+               className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs focus:ring-1 focus:ring-purple-500 outline-none"
+             />
+          </div>
 
-        {/* Row 2 */}
-        
-        {/* Type & Bitrate Combined */}
-        <div className="md:col-span-4 grid grid-cols-2 gap-2">
-            <div>
-               <label className="text-xs text-slate-400 block mb-1">Type (DAB+ or DAB)</label>
-               <select
-                 value={service.type}
-                 onChange={(e) => onChange(service.id, 'type', e.target.value)}
-                 className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs focus:ring-1 focus:ring-blue-500 outline-none text-slate-300"
-               >
-                 <option value={AudioType.DAB_PLUS}>DAB+ (AAC)</option>
-                 <option value={AudioType.DAB_MP2}>DAB (MP2)</option>
-               </select>
-            </div>
-            {/* Custom Bitrate Dropdown */}
-            <div className="relative">
-               <label className="text-xs text-slate-400 block mb-1">Bitrate</label>
-               <button
-                 type="button"
-                 onClick={() => setIsBitrateOpen(!isBitrateOpen)}
-                 className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-left flex justify-between items-center focus:ring-1 focus:ring-blue-500 outline-none text-slate-300 hover:border-slate-500 transition-colors"
-               >
-                 <span>{service.bitrate} Kbps</span>
-                 <ChevronDown className="w-3 h-3 text-slate-500" />
-               </button>
-               
-               {isBitrateOpen && (
-                 <>
-                    {/* Invisible backdrop to handle click-outside */}
-                    <div className="fixed inset-0 z-10 cursor-default" onClick={() => setIsBitrateOpen(false)} />
-                    
-                    {/* Custom Dropdown List */}
-                    <div className="absolute top-full left-0 w-full mt-1 bg-slate-900 border border-slate-700 rounded shadow-xl max-h-60 overflow-y-auto z-20">
-                      {BITRATES_KBPS.map(b => (
-                        <button
-                          key={b}
-                          type="button"
-                          onClick={() => {
-                            onChange(service.id, 'bitrate', b);
-                            setIsBitrateOpen(false);
-                          }}
-                          className={`w-full text-left px-3 py-1.5 text-xs hover:bg-blue-600 hover:text-white transition-colors border-b border-slate-800 last:border-0 ${service.bitrate === b ? 'bg-blue-600 text-white' : 'text-slate-300'}`}
-                        >
-                          {b} Kbps
-                        </button>
-                      ))}
-                    </div>
-                 </>
-               )}
-            </div>
-        </div>
+          <div className="md:col-span-4">
+             <label className="text-xs text-slate-400 block mb-1">Short Label (Max. 8 characters)</label>
+             <input
+               type="text"
+               maxLength={8}
+               value={service.shortLabel}
+               onChange={(e) => onChange(service.id, 'shortLabel', e.target.value)}
+               className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs focus:ring-1 focus:ring-purple-500 outline-none"
+             />
+          </div>
 
-        {/* Protection */}
-        <div className="md:col-span-4">
-           <label className="text-xs text-slate-400 block mb-1">EEP / UEP (Protection)</label>
-           <select
-             value={service.protection}
-             onChange={(e) => onChange(service.id, 'protection', e.target.value)}
-             className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs focus:ring-1 focus:ring-blue-500 outline-none text-slate-300"
-           >
-             {protectionOptions.map(l => (
-               <option key={l} value={l}>{l}</option>
-             ))}
-           </select>
-        </div>
+          {/* Row 2 */}
+          <div className="md:col-span-4">
+             <label className="text-xs text-slate-400 block mb-1">Type</label>
+             <select
+               value={service.spiType || 'packet'}
+               onChange={(e) => onChange(service.id, 'spiType', e.target.value)}
+               className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs focus:ring-1 focus:ring-purple-500 outline-none text-slate-300"
+             >
+               <option value="packet">packet</option>
+               <option value="enhancedpacket">enhancedpacket</option>
+             </select>
+          </div>
 
-        {/* PTY */}
-        <div className="md:col-span-4">
-           <label className="text-xs text-slate-400 block mb-1">PTY (Program Type)</label>
-           <select
-             value={service.pty}
-             onChange={(e) => onChange(service.id, 'pty', e.target.value)}
-             className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs focus:ring-1 focus:ring-blue-500 outline-none text-slate-300 truncate"
-           >
-             {PTY_LIST.map(p => (
-               <option key={p.value} value={p.value}>{p.label}</option>
-             ))}
-           </select>
-        </div>
+          <div className="md:col-span-4">
+             <label className="text-xs text-slate-400 block mb-1">Bitrate</label>
+             <select
+               value={service.bitrate}
+               onChange={(e) => onChange(service.id, 'bitrate', parseInt(e.target.value, 10))}
+               className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs focus:ring-1 focus:ring-purple-500 outline-none text-slate-300"
+             >
+               <option value={8}>8 Kbps</option>
+               <option value={16}>16 Kbps</option>
+               <option value={24}>24 Kbps</option>
+               <option value={32}>32 Kbps</option>
+             </select>
+          </div>
 
-        {/* Row 3 */}
-        {/* Country */}
-        <div className="md:col-span-6">
-          <label className="text-xs text-slate-400 block mb-1">Country (for ECC)</label>
-          {isCustomCountry ? (
-            <div className="flex">
-              <input
-                type="text"
-                maxLength={2}
+          <div className="md:col-span-4">
+             <label className="text-xs text-slate-400 block mb-1">EEP / UEP (Protection)</label>
+             <select
+               value={service.protection}
+               onChange={(e) => onChange(service.id, 'protection', e.target.value)}
+               className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs focus:ring-1 focus:ring-purple-500 outline-none text-slate-300"
+             >
+               {protectionOptions.map(l => (
+                 <option key={l} value={l}>{l}</option>
+               ))}
+             </select>
+          </div>
+
+          {/* Row 3 */}
+          <div className="md:col-span-6">
+             <label className="text-xs text-slate-400 block mb-1">Input URI (File Path)</label>
+             <input
+               type="text"
+               value={service.inputUri !== undefined ? service.inputUri : '/home/odr/ODR-mmbTools/spi-output.dat'}
+               onChange={(e) => onChange(service.id, 'inputUri', e.target.value)}
+               placeholder="/home/odr/ODR-mmbTools/spi-output.dat"
+               className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-xs font-mono focus:ring-1 focus:ring-purple-500 outline-none text-slate-200"
+             />
+          </div>
+
+          <div className="md:col-span-3">
+             <label className="text-xs text-slate-400 block mb-1">Address (comp-spi)</label>
+             <input
+               type="text"
+               maxLength={4}
+               value={service.spiAddress !== undefined ? service.spiAddress : '0x1'}
+               onChange={(e) => onChange(service.id, 'spiAddress', e.target.value)}
+               className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-xs font-mono focus:ring-1 focus:ring-purple-500 outline-none text-slate-200"
+             />
+          </div>
+
+          <div className="md:col-span-3">
+             <label className="text-xs text-slate-400 block mb-1">Datagroup</label>
+             <select
+               value={service.spiDatagroup !== false ? 'true' : 'false'}
+               onChange={(e) => onChange(service.id, 'spiDatagroup', e.target.value === 'true')}
+               className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs focus:ring-1 focus:ring-purple-500 outline-none text-slate-300"
+             >
+               <option value="true">true</option>
+               <option value="false">false</option>
+             </select>
+          </div>
+        </div>
+      ) : (
+        /* Audio Service Fields */
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-3 pl-0 sm:pl-11">
+          {/* Row 1 */}
+          {/* SID */}
+          <div className="md:col-span-2">
+             <label className="text-xs text-slate-400 block mb-1">Service ID (SID)</label>
+             <input
+               type="text"
+               maxLength={4}
+               value={service.sid}
+               onChange={(e) => onChange(service.id, 'sid', e.target.value.toUpperCase())}
+               className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs uppercase focus:ring-1 focus:ring-blue-500 outline-none"
+             />
+          </div>
+
+          {/* Long Label */}
+          <div className="md:col-span-6">
+             <label className="text-xs text-slate-400 block mb-1">Long Label (Max. 16 characters)</label>
+             <input
+               type="text"
+               maxLength={16}
+               value={service.label}
+               onChange={(e) => onChange(service.id, 'label', e.target.value)}
+               className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs focus:ring-1 focus:ring-blue-500 outline-none"
+             />
+          </div>
+          
+          {/* Short Label */}
+          <div className="md:col-span-4">
+             <label className="text-xs text-slate-400 block mb-1">Short Label (Max. 8 characters)</label>
+             <input
+               type="text"
+               maxLength={8}
+               value={service.shortLabel}
+               onChange={(e) => onChange(service.id, 'shortLabel', e.target.value)}
+               className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs focus:ring-1 focus:ring-blue-500 outline-none"
+             />
+          </div>
+
+          {/* Row 2 */}
+          {/* Type & Bitrate Combined */}
+          <div className="md:col-span-4 grid grid-cols-2 gap-2">
+              <div>
+                 <label className="text-xs text-slate-400 block mb-1">Type (DAB+ or DAB)</label>
+                 <select
+                   value={service.type}
+                   onChange={(e) => onChange(service.id, 'type', e.target.value)}
+                   className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs focus:ring-1 focus:ring-blue-500 outline-none text-slate-300"
+                 >
+                   <option value={AudioType.DAB_PLUS}>DAB+ (AAC)</option>
+                   <option value={AudioType.DAB_MP2}>DAB (MP2)</option>
+                 </select>
+              </div>
+              {/* Custom Bitrate Dropdown */}
+              <div className="relative">
+                 <label className="text-xs text-slate-400 block mb-1">Bitrate</label>
+                 <button
+                   type="button"
+                   onClick={() => setIsBitrateOpen(!isBitrateOpen)}
+                   className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-left flex justify-between items-center focus:ring-1 focus:ring-blue-500 outline-none text-slate-300 hover:border-slate-500 transition-colors"
+                 >
+                   <span>{service.bitrate} Kbps</span>
+                   <ChevronDown className="w-3 h-3 text-slate-500" />
+                 </button>
+                 
+                 {isBitrateOpen && (
+                   <>
+                      {/* Invisible backdrop to handle click-outside */}
+                      <div className="fixed inset-0 z-10 cursor-default" onClick={() => setIsBitrateOpen(false)} />
+                      
+                      {/* Custom Dropdown List */}
+                      <div className="absolute top-full left-0 w-full mt-1 bg-slate-900 border border-slate-700 rounded shadow-xl max-h-60 overflow-y-auto z-20">
+                        {BITRATES_KBPS.map(b => (
+                          <button
+                            key={b}
+                            type="button"
+                            onClick={() => {
+                              onChange(service.id, 'bitrate', b);
+                              setIsBitrateOpen(false);
+                            }}
+                            className={`w-full text-left px-3 py-1.5 text-xs hover:bg-blue-600 hover:text-white transition-colors border-b border-slate-800 last:border-0 ${service.bitrate === b ? 'bg-blue-600 text-white' : 'text-slate-300'}`}
+                          >
+                            {b} Kbps
+                          </button>
+                        ))}
+                      </div>
+                   </>
+                 )}
+              </div>
+          </div>
+
+          {/* Protection */}
+          <div className="md:col-span-4">
+             <label className="text-xs text-slate-400 block mb-1">EEP / UEP (Protection)</label>
+             <select
+               value={service.protection}
+               onChange={(e) => onChange(service.id, 'protection', e.target.value)}
+               className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs focus:ring-1 focus:ring-blue-500 outline-none text-slate-300"
+             >
+               {protectionOptions.map(l => (
+                 <option key={l} value={l}>{l}</option>
+               ))}
+             </select>
+          </div>
+
+          {/* PTY */}
+          <div className="md:col-span-4">
+             <label className="text-xs text-slate-400 block mb-1">PTY (Program Type)</label>
+             <select
+               value={service.pty}
+               onChange={(e) => onChange(service.id, 'pty', e.target.value)}
+               className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs focus:ring-1 focus:ring-blue-500 outline-none text-slate-300 truncate"
+             >
+               {PTY_LIST.map(p => (
+                 <option key={p.value} value={p.value}>{p.label}</option>
+               ))}
+             </select>
+          </div>
+
+          {/* Row 3 */}
+          {/* Country */}
+          <div className="md:col-span-6">
+            <label className="text-xs text-slate-400 block mb-1">Country (for ECC)</label>
+            {isCustomCountry ? (
+              <div className="flex">
+                <input
+                  type="text"
+                  maxLength={2}
+                  value={service.country}
+                  onChange={(e) => onChange(service.id, 'country', e.target.value.toUpperCase())}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-l-md py-1.5 pl-3 pr-3 text-xs focus:ring-1 focus:ring-blue-500 outline-none"
+                  placeholder="Indicate a hexadecimal value (Example: E1)"
+                />
+                <button 
+                  onClick={() => onChange(service.id, 'country', 'None / Undefined')}
+                  className="bg-slate-700 hover:bg-slate-600 border border-l-0 border-slate-700 rounded-r-md px-3 flex items-center justify-center text-slate-300 transition-colors"
+                  title="Reset to list"
+                >
+                  <RefreshCw className="w-3 h-3" />
+                </button>
+              </div>
+            ) : (
+              <select
                 value={service.country}
-                onChange={(e) => onChange(service.id, 'country', e.target.value.toUpperCase())}
-                className="w-full bg-slate-900 border border-slate-700 rounded-l-md py-1.5 pl-3 pr-3 text-xs focus:ring-1 focus:ring-blue-500 outline-none"
-                placeholder="Indicate a hexadecimal value (Example: E1)"
-              />
-              <button 
-                onClick={() => onChange(service.id, 'country', 'None / Undefined')}
-                className="bg-slate-700 hover:bg-slate-600 border border-l-0 border-slate-700 rounded-r-md px-3 flex items-center justify-center text-slate-300 transition-colors"
-                title="Reset to list"
+                onChange={(e) => {
+                   const val = e.target.value;
+                   if (val === 'CUSTOM_VALUE') onChange(service.id, 'country', '');
+                   else onChange(service.id, 'country', val);
+                }}
+                className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs focus:ring-1 focus:ring-blue-500 outline-none text-slate-300"
               >
-                <RefreshCw className="w-3 h-3" />
-              </button>
-            </div>
-          ) : (
-            <select
-              value={service.country}
-              onChange={(e) => {
-                 const val = e.target.value;
-                 if (val === 'CUSTOM_VALUE') onChange(service.id, 'country', '');
-                 else onChange(service.id, 'country', val);
-              }}
-              className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs focus:ring-1 focus:ring-blue-500 outline-none text-slate-300"
-            >
-              <option value={COUNTRIES[0].name}>{COUNTRIES[0].name}</option>
-              <option value="CUSTOM_VALUE" className="text-blue-400 font-semibold">+ Specify a custom value</option>
-              {COUNTRIES.slice(1).map(c => (
-                <option key={c.name} value={c.name}>
-                  {`${c.name} [${c.code}]`}
-                </option>
-              ))}
-            </select>
-          )}
-        </div>
-        
-        {/* Language */}
-        <div className="md:col-span-6">
-          <label className="text-xs text-slate-400 block mb-1">Language (for LIC)</label>
-          {isCustomLanguage ? (
-            <div className="flex">
-              <input
-                type="text"
-                maxLength={2}
+                <option value={COUNTRIES[0].name}>{COUNTRIES[0].name}</option>
+                <option value="CUSTOM_VALUE" className="text-blue-400 font-semibold">+ Specify a custom value</option>
+                {COUNTRIES.slice(1).map(c => (
+                  <option key={c.name} value={c.name}>
+                    {`${c.name} [${c.code}]`}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+          
+          {/* Language */}
+          <div className="md:col-span-6">
+            <label className="text-xs text-slate-400 block mb-1">Language (for LIC)</label>
+            {isCustomLanguage ? (
+              <div className="flex">
+                <input
+                  type="text"
+                  maxLength={2}
+                  value={service.language}
+                  onChange={(e) => onChange(service.id, 'language', e.target.value.toUpperCase())}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-l-md py-1.5 pl-3 pr-3 text-xs focus:ring-1 focus:ring-blue-500 outline-none"
+                  placeholder="Indicate a hexadecimal value (Example: 0F)"
+                />
+                <button 
+                  onClick={() => onChange(service.id, 'language', 'None / Undefined')}
+                  className="bg-slate-700 hover:bg-slate-600 border border-l-0 border-slate-700 rounded-r-md px-3 flex items-center justify-center text-slate-300 transition-colors"
+                  title="Reset to list"
+                >
+                  <RefreshCw className="w-3 h-3" />
+                </button>
+              </div>
+            ) : (
+              <select
                 value={service.language}
-                onChange={(e) => onChange(service.id, 'language', e.target.value.toUpperCase())}
-                className="w-full bg-slate-900 border border-slate-700 rounded-l-md py-1.5 pl-3 pr-3 text-xs focus:ring-1 focus:ring-blue-500 outline-none"
-                placeholder="Indicate a hexadecimal value (Example: 0F)"
-              />
-              <button 
-                onClick={() => onChange(service.id, 'language', 'None / Undefined')}
-                className="bg-slate-700 hover:bg-slate-600 border border-l-0 border-slate-700 rounded-r-md px-3 flex items-center justify-center text-slate-300 transition-colors"
-                title="Reset to list"
+                onChange={(e) => {
+                   const val = e.target.value;
+                   if (val === 'CUSTOM_VALUE') onChange(service.id, 'language', '');
+                   else onChange(service.id, 'language', val);
+                }}
+                className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs focus:ring-1 focus:ring-blue-500 outline-none text-slate-300"
               >
-                <RefreshCw className="w-3 h-3" />
-              </button>
-            </div>
-          ) : (
-            <select
-              value={service.language}
-              onChange={(e) => {
-                 const val = e.target.value;
-                 if (val === 'CUSTOM_VALUE') onChange(service.id, 'language', '');
-                 else onChange(service.id, 'language', val);
-              }}
-              className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs focus:ring-1 focus:ring-blue-500 outline-none text-slate-300"
-            >
-              <option value={LANGUAGES[0].name}>{LANGUAGES[0].name}</option>
-              <option value="CUSTOM_VALUE" className="text-blue-400 font-semibold">+ Specify a custom value</option>
-              {LANGUAGES.slice(1).map(l => (
-                <option key={l.name} value={l.name}>
-                  {`${l.name} [${l.code}]`}
-                </option>
-              ))}
-            </select>
-          )}
+                <option value={LANGUAGES[0].name}>{LANGUAGES[0].name}</option>
+                <option value="CUSTOM_VALUE" className="text-blue-400 font-semibold">+ Specify a custom value</option>
+                {LANGUAGES.slice(1).map(l => (
+                  <option key={l.name} value={l.name}>
+                    {`${l.name} [${l.code}]`}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Compliance Checks */}
       <div className="mt-4 pt-3 border-t border-slate-700 pl-0 sm:pl-11 space-y-2">
@@ -343,7 +473,7 @@ export const ServiceItem: React.FC<Props> = ({ id, index, service, onChange, onR
           </div>
         ) : (
           /* Only show ETSI Check if NO B-Profile Error */
-          isCompliant ? (
+          (service.isSpi || isCompliant) ? (
               <div className="flex items-center text-emerald-400 text-xs font-medium">
                   <ThumbsUp className="w-4 h-4 mr-2" />
                   The configuration of this service complies with ETSI requirements.

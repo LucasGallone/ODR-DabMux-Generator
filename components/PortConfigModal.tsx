@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { GlobalSettings, ServiceInfo, OutputFormat } from '../types';
-import { Settings, Check, List, FileText } from 'lucide-react';
+import { Settings, Check, List, FileText, Database } from 'lucide-react';
 import { calculateCU } from '../utils/dabLogic';
 import { MAX_CU } from '../constants';
 
@@ -136,10 +136,22 @@ export const PortConfigModal: React.FC<Props> = ({ initialSettings, services, to
                 {services.map((srv, idx) => {
                   const srvCu = calculateCU(srv.bitrate, srv.protection, srv.type);
                   return (
-                    <div key={srv.id} className="bg-slate-800 rounded p-3 border border-slate-700 flex justify-between items-center text-sm">
+                    <div key={srv.id} className={`rounded p-3 border flex justify-between items-center text-sm ${
+                      srv.isSpi 
+                        ? 'bg-slate-800/90 border-purple-800/70 ring-1 ring-purple-500/20' 
+                        : 'bg-slate-800 border-slate-700'
+                    }`}>
                        <div>
-                         <div className="font-semibold text-slate-200">
+                         <div className="font-semibold text-slate-200 flex items-center">
+                           {srv.isSpi && (
+                             <Database className="w-3.5 h-3.5 mr-1.5 text-purple-400 shrink-0" />
+                           )}
                            Service #{idx + 1}{srv.label ? ':' : ''} {srv.label}
+                           {srv.isSpi && (
+                             <span className="ml-2 px-1.5 py-0.5 text-[9px] font-bold rounded bg-purple-900/70 text-purple-300 border border-purple-700/60 uppercase">
+                               SPI
+                             </span>
+                           )}
                          </div>
                          <div className="text-xs text-slate-500 flex gap-2 mt-1">
                            <span className="font-mono bg-slate-900 px-1 rounded text-slate-400 border border-slate-700">SID: {srv.sid}</span>

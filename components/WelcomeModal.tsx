@@ -1,5 +1,5 @@
 
-import React, { useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { FileUp, Plus, Radio } from 'lucide-react';
 
 interface Props {
@@ -10,12 +10,29 @@ interface Props {
 export const WelcomeModal: React.FC<Props> = ({ onCreateNew, onImport }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  useEffect(() => {
+    const originalBodyOverflow = document.body.style.overflow;
+    const originalHtmlOverflow = document.documentElement.style.overflow;
+    document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
+
+    return () => {
+      document.body.style.overflow = originalBodyOverflow;
+      document.documentElement.style.overflow = originalHtmlOverflow;
+    };
+  }, []);
+
   const handleImportClick = () => {
     fileInputRef.current?.click();
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950">
+    <div 
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950 overflow-hidden"
+      onMouseDown={(e) => {
+        if (e.button === 1) e.preventDefault();
+      }}
+    >
       <div className="bg-slate-900 rounded-2xl w-full max-w-2xl border border-slate-700 shadow-2xl p-10 text-center">
         
         <div className="flex justify-center mb-6">

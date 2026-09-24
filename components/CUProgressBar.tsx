@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { MAX_CU } from '../constants';
-import { Activity } from 'lucide-react';
+import { Activity, Database } from 'lucide-react';
 import { ServiceInfo } from '../types';
 import { calculateCU } from '../utils/dabLogic';
 
@@ -10,25 +10,30 @@ interface Props {
 }
 
 const SEGMENT_COLORS = [
-  'bg-blue-500', 'bg-emerald-500', 'bg-purple-500', 'bg-amber-500',
+  'bg-blue-500', 'bg-emerald-500', 'bg-amber-500',
   'bg-rose-500', 'bg-cyan-500', 'bg-indigo-500', 'bg-lime-500',
   'bg-pink-500', 'bg-orange-500', 'bg-teal-500', 'bg-fuchsia-500'
 ];
 
 export const CUProgressBar: React.FC<Props> = ({ services, totalCU }) => {
-  const [hoveredService, setHoveredService] = useState<{ label: string; cu: number; sid: string } | null>(null);
+  const [hoveredService, setHoveredService] = useState<{ label: string; cu: number; sid: string; isSpi?: boolean } | null>(null);
 
   const isOverLimit = totalCU > MAX_CU;
 
   // Calculate segments
-  const segments = services.map((service, index) => {
+  let audioColorIndex = 0;
+  const segments = services.map((service) => {
     const cu = calculateCU(service.bitrate, service.protection, service.type);
     const percent = (cu / MAX_CU) * 100;
+    const color = service.isSpi 
+      ? 'bg-purple-600' 
+      : SEGMENT_COLORS[(audioColorIndex++) % SEGMENT_COLORS.length];
+
     return {
       ...service,
       cu,
       percent,
-      color: SEGMENT_COLORS[index % SEGMENT_COLORS.length]
+      color
     };
   });
 
@@ -37,8 +42,19 @@ export const CUProgressBar: React.FC<Props> = ({ services, totalCU }) => {
       <div className="flex justify-between items-end mb-2 h-8">
         <div className="flex items-center">
             {hoveredService ? (
-                <div className="animate-fade-in text-sm font-bold text-white flex items-center bg-slate-700 px-3 py-1 rounded-full border border-slate-600">
-                    <span className="text-blue-400 mr-2">Service:</span> 
+                <div className={`animate-fade-in text-sm font-bold text-white flex items-center px-3 py-1 rounded-full border ${
+                    hoveredService.isSpi 
+                      ? 'bg-purple-950/80 border-purple-500/50' 
+                      : 'bg-slate-700 border-slate-600'
+                  }`}>
+                    {hoveredService.isSpi ? (
+                      <span className="flex items-center text-purple-400 mr-2">
+                        <Database className="w-3.5 h-3.5 mr-1" />
+                        SPI:
+                      </span>
+                    ) : (
+                      <span className="text-blue-400 mr-2">Service:</span>
+                    )} 
                     {hoveredService.label || 'Unnamed'} 
                     <span className="mx-2 text-slate-500">|</span>
                     <span className="font-mono text-emerald-400">{hoveredService.cu} CU</span>
@@ -65,9 +81,13 @@ export const CUProgressBar: React.FC<Props> = ({ services, totalCU }) => {
         {segments.map((segment) => (
           <div 
             key={segment.id}
-            className={`h-full transition-all duration-300 ${segment.color} hover:brightness-110 relative group cursor-help border-r border-slate-900/20`}
+            className={`h-full transition-all duration-300 ${segment.color} ${
+              segment.isSpi 
+                ? 'bg-gradient-to-r from-purple-600 to-fuchsia-500 ring-1 ring-white/30 [background-image:repeating-linear-gradient(45deg,transparent,transparent_4px,rgba(255,255,255,0.25)_4px,rgba(255,255,255,0.25)_8px)]' 
+                : ''
+            } hover:brightness-125 relative group cursor-help border-r border-slate-900/30`}
             style={{ width: `${segment.percent}%` }}
-            onMouseEnter={() => setHoveredService({ label: segment.label, cu: segment.cu, sid: segment.sid })}
+            onMouseEnter={() => setHoveredService({ label: segment.label, cu: segment.cu, sid: segment.sid, isSpi: segment.isSpi })}
             onMouseLeave={() => setHoveredService(null)}
           >
           </div>
